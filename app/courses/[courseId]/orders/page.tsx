@@ -44,6 +44,13 @@ export default function CourseOrdersPage() {
   }
 
   const fetchOrders = useCallback(async () => {
+    const API_URL = process.env.NEXT_PUBLIC_API_URL;
+
+    if (!API_URL) {
+      console.error("NEXT_PUBLIC_API_URL is missing.");
+    }
+    console.log("API_URL:", API_URL);
+
     setRefreshing(true);
 
     try {
