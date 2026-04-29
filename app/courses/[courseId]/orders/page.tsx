@@ -15,6 +15,7 @@ type Order = {
   tee_time_id: string;
   status: string;
   fulfillment_type: string;
+  pickup_code: string;
   total_cents: number;
   created_at: string;
   items: OrderItem[];
@@ -261,6 +262,9 @@ function OrderCard({
     <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4">
       <div className="flex items-start justify-between gap-3">
         <div>
+          <h2 className="text-4xl font-bold tracking-widest">
+            {order.pickup_code}
+          </h2>
           <p className="text-sm text-neutral-400">Order</p>
           <p className="mt-1 font-mono text-xs text-neutral-300">
             {order.order_id.slice(0, 8)}
