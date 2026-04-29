@@ -22,6 +22,7 @@ type Order = {
   service_fee_cents: number;
   total_cents: number;
   items: OrderItem[];
+  pickup_code: string;
 };
 
 export default function CheckoutSuccessPage() {
@@ -84,6 +85,14 @@ export default function CheckoutSuccessPage() {
                 Your order has been fulfilled.
               </p>
             )}
+
+            <div className="mt-6 rounded-xl bg-green-500 p-4 text-black">
+              <p className="text-sm font-medium">Pickup code</p>
+              <p className="mt-1 text-4xl font-bold tracking-widest">
+                {order.pickup_code}
+              </p>
+              <p className="mt-2 text-sm">Show this code at the clubhouse.</p>
+            </div>
 
             <div className="mt-5 space-y-2">
               {order.items.map((item, index) => (
