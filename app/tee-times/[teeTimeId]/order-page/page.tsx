@@ -22,17 +22,35 @@ type OrderPage = {
 
 type Cart = Record<string, number>;
 
+type OrderType = "before_round" | "at_turn" | "after_round";
+
+const ORDER_TYPE_OPTIONS: { value: OrderType; label: string; hint: string }[] =
+  [
+    {
+      value: "before_round",
+      label: "Before Round",
+      hint: "Ready ~20 min before tee time",
+    },
+    {
+      value: "at_turn",
+      label: "At the Turn",
+      hint: "Ready ~1h 45min into your round",
+    },
+    {
+      value: "after_round",
+      label: "After Round",
+      hint: "Ready ~4 hours after tee time",
+    },
+  ];
+
 export default function TeeTimeOrderPage() {
   const params = useParams();
   const teeTimeId = params.teeTimeId as string;
 
   const [data, setData] = useState<OrderPage | null>(null);
+  const [orderType, setOrderType] = useState<OrderType>("before_round");
   const [cart, setCart] = useState<Cart>({});
   const [loading, setLoading] = useState(false);
-  const [confirmation, setConfirmation] = useState<{
-    order_id: string;
-    total_cents: number;
-  } | null>(null);
 
   useEffect(() => {
     fetch(
@@ -83,6 +101,7 @@ export default function TeeTimeOrderPage() {
       },
       body: JSON.stringify({
         tee_time_id: teeTimeId,
+        order_type: orderType,
         items: selectedItems.map((item) => ({
           offer_id: item.id,
           quantity: item.quantity,
@@ -130,33 +149,6 @@ export default function TeeTimeOrderPage() {
     );
   }
 
-  if (confirmation) {
-    return (
-      <main className="min-h-screen bg-neutral-950 text-white px-6 py-10">
-        <div className="mx-auto max-w-md">
-          <p className="text-sm text-green-400 font-medium">Foreturn IQ</p>
-          <h1 className="mt-3 text-3xl font-bold">Order received</h1>
-
-          <p className="mt-4 text-neutral-300">
-            Your order has been sent to the clubhouse.
-          </p>
-
-          <div className="mt-6 rounded-xl border border-neutral-800 bg-neutral-900 p-4">
-            <p className="text-sm text-neutral-400">Order ID</p>
-            <p className="mt-1 break-all font-mono text-sm">
-              {confirmation.order_id}
-            </p>
-
-            <p className="mt-4 text-sm text-neutral-400">Total</p>
-            <p className="mt-1 text-2xl font-bold">
-              ${(confirmation.total_cents / 100).toFixed(2)}
-            </p>
-          </div>
-        </div>
-      </main>
-    );
-  }
-
   return (
     <main className="min-h-screen bg-neutral-950 text-white px-6 py-10">
       <div className="mx-auto max-w-md pb-32">
@@ -167,6 +159,26 @@ export default function TeeTimeOrderPage() {
         <p className="mt-2 text-neutral-400">
           Tee time: {new Date(data.starts_at).toLocaleString()}
         </p>
+
+        <div className="mt-8">
+          <h2 className="text-xl font-semibold">When would you like it?</h2>
+          <div className="mt-3 grid gap-3 sm:grid-cols-3">
+            {ORDER_TYPE_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                onClick={() => setOrderType(opt.value)}
+                className={`rounded-xl border p-3 text-left transition-colors ${
+                  orderType === opt.value
+                    ? "border-green-500 bg-green-500/10"
+                    : "border-neutral-800 bg-neutral-900 hover:border-neutral-700"
+                }`}
+              >
+                <p className="font-semibold text-sm">{opt.label}</p>
+                <p className="mt-1 text-xs text-neutral-400">{opt.hint}</p>
+              </button>
+            ))}
+          </div>
+        </div>
 
         <h2 className="mt-8 text-xl font-semibold">Available offers</h2>
 
