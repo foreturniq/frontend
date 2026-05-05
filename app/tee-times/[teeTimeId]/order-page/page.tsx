@@ -18,6 +18,8 @@ type OrderPage = {
   starts_at: string;
   minutes_since_tee_time: number;
   offers: Offer[];
+  service_fee_cents: number;
+  service_fee_label: string;
 };
 
 type Cart = Record<string, number>;
@@ -256,13 +258,39 @@ export default function TeeTimeOrderPage() {
       {selectedItems.length > 0 && (
         <div className="fixed inset-x-0 bottom-0 border-t border-neutral-800 bg-neutral-950 p-4">
           <div className="mx-auto max-w-md">
-            <div className="mb-3 flex items-center justify-between">
-              <span className="text-neutral-300">
-                {selectedItems.length} item(s)
-              </span>
-              <span className="text-xl font-bold">
-                ${(totalCents / 100).toFixed(2)}
-              </span>
+            <div className="mb-3 space-y-1.5 text-sm">
+              <div className="flex justify-between text-neutral-400">
+                <span>Subtotal</span>
+                <span>${(totalCents / 100).toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between text-neutral-400">
+                <span>Sales Tax (8%)</span>
+                <span>${(totalCents * 0.08 / 100).toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between text-neutral-400">
+                <span>
+                  Service Fee{" "}
+                  {data && (
+                    <span className="text-xs text-neutral-500">
+                      — {data.service_fee_label}
+                    </span>
+                  )}
+                </span>
+                <span>
+                  {data?.service_fee_cents === 0
+                    ? "Free"
+                    : `$${((data?.service_fee_cents ?? 0) / 100).toFixed(2)}`}
+                </span>
+              </div>
+              <div className="flex justify-between border-t border-neutral-800 pt-1.5 font-bold text-white">
+                <span>Total</span>
+                <span>
+                  ${(
+                    (totalCents * 1.08 + (data?.service_fee_cents ?? 0)) /
+                    100
+                  ).toFixed(2)}
+                </span>
+              </div>
             </div>
 
             <button
