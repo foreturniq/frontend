@@ -57,8 +57,22 @@ export default function TeeTimeOrderPage() {
       `${process.env.NEXT_PUBLIC_API_URL}/tee-times/${teeTimeId}/order-page`,
     )
       .then((res) => res.json())
-      .then(setData);
+      .then((d) => {
+        setData(d);
+        const cutoff = new Date(d.starts_at).getTime() - 5 * 60 * 1000;
+        if (Date.now() >= cutoff) {
+          setOrderType("at_turn");
+        }
+      });
   }, [teeTimeId]);
+
+  const availableOrderTypes = useMemo(() => {
+    if (!data) return ORDER_TYPE_OPTIONS;
+    const cutoff = new Date(data.starts_at).getTime() - 5 * 60 * 1000;
+    return ORDER_TYPE_OPTIONS.filter(
+      (opt) => opt.value !== "before_round" || Date.now() < cutoff,
+    );
+  }, [data]);
 
   const selectedItems = useMemo(() => {
     if (!data) return [];
@@ -163,7 +177,7 @@ export default function TeeTimeOrderPage() {
         <div className="mt-8">
           <h2 className="text-xl font-semibold">When would you like it?</h2>
           <div className="mt-3 grid gap-3 sm:grid-cols-3">
-            {ORDER_TYPE_OPTIONS.map((opt) => (
+            {availableOrderTypes.map((opt) => (
               <button
                 key={opt.value}
                 onClick={() => setOrderType(opt.value)}
