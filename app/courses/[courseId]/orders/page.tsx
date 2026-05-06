@@ -189,7 +189,11 @@ export default function CourseOrdersPage() {
   );
 
   const revenueCents = orders
-    .filter((o) => o.status !== "canceled")
+    .filter(
+      (o) =>
+        o.status !== "canceled" &&
+        new Date(o.tee_time_starts_at).toDateString() === today,
+    )
     .reduce((sum, o) => sum + o.total_cents, 0);
 
   const paidActions = [
