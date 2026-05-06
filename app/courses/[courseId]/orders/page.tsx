@@ -174,9 +174,19 @@ export default function CourseOrdersPage() {
     loadCourse();
   }, [courseId]);
 
+  const today = new Date().toDateString();
+
   const paid = orders.filter((o) => o.status === "paid");
-  const fulfilled = orders.filter((o) => o.status === "fulfilled");
-  const refunded = orders.filter((o) => o.status === "refunded");
+  const fulfilled = orders.filter(
+    (o) =>
+      o.status === "fulfilled" &&
+      new Date(o.tee_time_starts_at).toDateString() === today,
+  );
+  const refunded = orders.filter(
+    (o) =>
+      o.status === "refunded" &&
+      new Date(o.tee_time_starts_at).toDateString() === today,
+  );
 
   const revenueCents = orders
     .filter((o) => o.status !== "canceled")
