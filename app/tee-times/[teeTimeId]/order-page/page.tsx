@@ -12,6 +12,19 @@ type Offer = {
   fulfillment_type: string;
 };
 
+type LastOrderItem = {
+  offer_id: string;
+  item_name: string;
+  quantity: number;
+  unit_price_cents: number;
+  available: boolean;
+};
+
+type LastOrder = {
+  tee_time_date: string;
+  items: LastOrderItem[];
+};
+
 type OrderPage = {
   tee_time_id: string;
   course_name: string;
@@ -20,6 +33,7 @@ type OrderPage = {
   offers: Offer[];
   service_fee_cents: number;
   service_fee_label: string;
+  last_order: LastOrder | null;
 };
 
 type Cart = Record<string, number>;
@@ -107,6 +121,17 @@ export default function TeeTimeOrderPage() {
     }));
   }
 
+  function quickReorder() {
+    if (!data?.last_order) return;
+    const newCart: Cart = {};
+    for (const item of data.last_order.items) {
+      if (item.available) {
+        newCart[item.offer_id] = item.quantity;
+      }
+    }
+    setCart(newCart);
+  }
+
   async function submitOrder() {
     setLoading(true);
 
@@ -175,6 +200,50 @@ export default function TeeTimeOrderPage() {
         <p className="mt-2 text-neutral-400">
           Tee time: {new Date(data.starts_at).toLocaleString()}
         </p>
+
+        {data.last_order && (
+          <div className="mt-8 rounded-xl border border-neutral-700 bg-neutral-900 p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-xs uppercase tracking-wide text-green-400">
+                  Last time you ordered
+                </p>
+                <p className="mt-0.5 text-sm text-neutral-400">
+                  {new Date(data.last_order.tee_time_date).toLocaleDateString(
+                    [],
+                    { month: "long", day: "numeric" },
+                  )}
+                </p>
+              </div>
+              <button
+                onClick={quickReorder}
+                className="shrink-0 rounded-lg bg-green-500 px-3 py-2 text-sm font-semibold text-black"
+              >
+                Reorder
+              </button>
+            </div>
+            <div className="mt-3 space-y-1">
+              {data.last_order.items.map((item, i) => (
+                <div
+                  key={i}
+                  className={`flex justify-between text-sm ${
+                    item.available ? "text-neutral-200" : "text-neutral-600 line-through"
+                  }`}
+                >
+                  <span>
+                    {item.quantity}x {item.item_name}
+                  </span>
+                  <span>${(item.unit_price_cents / 100).toFixed(2)}</span>
+                </div>
+              ))}
+              {data.last_order.items.some((i) => !i.available) && (
+                <p className="mt-2 text-xs text-neutral-500">
+                  Struck-through items are no longer available and won&apos;t be added.
+                </p>
+              )}
+            </div>
+          </div>
+        )}
 
         <div className="mt-8">
           <h2 className="text-xl font-semibold">When would you like it?</h2>
