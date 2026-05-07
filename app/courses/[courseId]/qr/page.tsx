@@ -12,7 +12,7 @@ export default function CourseQRPage() {
 
   useEffect(() => {
     const base =
-      process.env.NEXT_PUBLIC_APP_URL || window.location.origin;
+      process.env.NEXT_PUBLIC_APP_URL || "https://api.foreturniq.com";
     setOrderUrl(`${base}/courses/${courseId}/order`);
   }, [courseId]);
 
