@@ -11,7 +11,9 @@ export default function CourseQRPage() {
   const [orderUrl, setOrderUrl] = useState("");
 
   useEffect(() => {
-    setOrderUrl(`${window.location.origin}/courses/${courseId}/order`);
+    const base =
+      process.env.NEXT_PUBLIC_APP_URL || window.location.origin;
+    setOrderUrl(`${base}/courses/${courseId}/order`);
   }, [courseId]);
 
   return (
