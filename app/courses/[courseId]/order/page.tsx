@@ -110,7 +110,7 @@ export default function CourseOrderEntryPage() {
             />
           </div>
 
-          <div className="overflow-hidden">
+          <div>
             <label className="block text-sm text-neutral-300">Tee time</label>
             <input
               type="datetime-local"
