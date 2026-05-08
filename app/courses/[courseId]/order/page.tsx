@@ -110,14 +110,14 @@ export default function CourseOrderEntryPage() {
             />
           </div>
 
-          <div>
+          <div className="overflow-hidden">
             <label className="block text-sm text-neutral-300">Tee time</label>
             <input
               type="datetime-local"
               value={startsAt}
               onChange={(e) => setStartsAt(e.target.value)}
               required
-              className="mt-2 w-full rounded-lg bg-neutral-900 border border-neutral-700 px-4 py-3"
+              className="mt-2 w-full max-w-full rounded-lg bg-neutral-900 border border-neutral-700 px-4 py-3"
             />
           </div>
 
