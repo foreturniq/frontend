@@ -117,7 +117,7 @@ export default function CourseOrderEntryPage() {
               value={startsAt}
               onChange={(e) => setStartsAt(e.target.value)}
               required
-              className="mt-2 w-full max-w-full rounded-lg bg-neutral-900 border border-neutral-700 px-4 py-3"
+              className="mt-2 block w-full min-w-0 rounded-lg bg-neutral-900 border border-neutral-700 px-4 py-3 text-base"
             />
           </div>
 
