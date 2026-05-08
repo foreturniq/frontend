@@ -125,15 +125,18 @@ export default function CourseOrderEntryPage() {
             <label className="block text-sm text-neutral-300">
               Player count
             </label>
-            <input
-              type="number"
-              min={1}
-              max={8}
+            <select
               value={playerCount}
               onChange={(e) => setPlayerCount(Number(e.target.value))}
               required
-              className="mt-2 w-full rounded-lg bg-neutral-900 border border-neutral-700 px-4 py-3"
-            />
+              className="mt-2 w-full rounded-lg bg-neutral-900 border border-neutral-700 px-4 py-3 text-base"
+            >
+              {[1, 2, 3, 4].map((n) => (
+                <option key={n} value={n}>
+                  {n} {n === 1 ? "player" : "players"}
+                </option>
+              ))}
+            </select>
           </div>
 
           <button
