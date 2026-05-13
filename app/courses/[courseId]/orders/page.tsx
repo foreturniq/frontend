@@ -375,6 +375,7 @@ function OrderCard({
         <span className="font-medium">{abbreviateName(order.golfer_name)}</span>
         <span className="text-neutral-600">•</span>
         <span className="text-neutral-300">
+          <br>
           Tee Time:{formatTime(order.tee_time_starts_at)}
         </span>
         <span className="text-neutral-600">•</span>
