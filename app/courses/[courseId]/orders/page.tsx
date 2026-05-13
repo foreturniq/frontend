@@ -81,11 +81,8 @@ function formatTime(iso: string): string {
   });
 }
 
-function abbreviateName(name: string): string {
-  if (!name) return "Unknown";
-  const parts = name.trim().split(/\s+/);
-  if (parts.length === 1) return parts[0];
-  return `${parts[0]} ${parts[parts.length - 1][0]}.`;
+function displayName(name: string): string {
+  return name?.trim() || "Unknown";
 }
 
 export default function CourseOrdersPage() {
@@ -372,7 +369,7 @@ function OrderCard({
       </div>
 
       <div className="mt-3 space-y-1 text-sm">
-        <p className="font-medium">{abbreviateName(order.golfer_name)}</p>
+        <p className="font-medium">{displayName(order.golfer_name)}</p>
         <p className="text-neutral-400">
           <span className="text-neutral-500">Tee Time</span>{" "}
           <span className="text-neutral-200">{formatTime(order.tee_time_starts_at)}</span>
@@ -480,7 +477,7 @@ function SimpleOrderColumn({
                     #{order.order_id.slice(0, 8)}
                   </p>
                   <p className="mt-0.5 text-sm font-medium">
-                    {abbreviateName(order.golfer_name)}
+                    {displayName(order.golfer_name)}
                   </p>
                 </div>
                 <div className="text-right">
