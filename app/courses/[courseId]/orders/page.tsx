@@ -106,13 +106,44 @@ export default function CourseOrdersPage() {
       .catch(console.error);
   }, [courseId]);
 
-  // SSE stream
+  // SSE with polling fallback
   useEffect(() => {
+    const API = process.env.NEXT_PUBLIC_API_URL;
+    let pollInterval: ReturnType<typeof setInterval> | null = null;
+
+    const startPolling = () => {
+      if (pollInterval) return;
+      pollInterval = setInterval(async () => {
+        try {
+          const res = await fetch(
+            `${API}/courses/${courseId}/orders?t=${Date.now()}`,
+            { cache: "no-store" },
+          );
+          const data = await res.json();
+          setOrders(data);
+          setLoading(false);
+          setLastRefreshedAt(new Date().toLocaleTimeString());
+        } catch {
+          // server still spinning up, will retry
+        }
+      }, 10000);
+    };
+
+    const stopPolling = () => {
+      if (pollInterval) {
+        clearInterval(pollInterval);
+        pollInterval = null;
+      }
+    };
+
     const es = new EventSource(
-      `${process.env.NEXT_PUBLIC_API_URL}/courses/${courseId}/orders/stream`,
+      `${API}/courses/${courseId}/orders/stream`,
     );
 
-    es.onopen = () => setConnected(true);
+    es.onopen = () => {
+      setConnected(true);
+      stopPolling();
+    };
 
     es.onmessage = (e) => {
       setOrders(JSON.parse(e.data));
@@ -120,9 +151,15 @@ export default function CourseOrdersPage() {
       setLastRefreshedAt(new Date().toLocaleTimeString());
     };
 
-    es.onerror = () => setConnected(false);
+    es.onerror = () => {
+      setConnected(false);
+      startPolling();
+    };
 
-    return () => es.close();
+    return () => {
+      es.close();
+      stopPolling();
+    };
   }, [courseId]);
 
   async function updateStatus(orderId: string, status: string) {
@@ -131,7 +168,6 @@ export default function CourseOrdersPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status }),
     });
-    // No manual refetch needed — the SSE stream will push the update within 3s
   }
 
   const today = new Date().toDateString();
