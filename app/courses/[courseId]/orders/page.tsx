@@ -136,9 +136,7 @@ export default function CourseOrdersPage() {
       }
     };
 
-    const es = new EventSource(
-      `${API}/courses/${courseId}/orders/stream`,
-    );
+    const es = new EventSource(`${API}/courses/${courseId}/orders/stream`);
 
     es.onopen = () => {
       setConnected(true);
@@ -224,14 +222,15 @@ export default function CourseOrdersPage() {
                   connected ? "bg-green-400 animate-pulse" : "bg-neutral-600"
                 }`}
               />
-              <span className={connected ? "text-green-400" : "text-neutral-600"}>
+              <span
+                className={connected ? "text-green-400" : "text-neutral-600"}
+              >
                 {connected ? "Live" : "Reconnecting..."}
               </span>
             </p>
           </div>
 
           <div className="flex items-center gap-3">
-
             <div className="rounded-xl border border-neutral-800 bg-neutral-900 p-4">
               <p className="text-sm text-neutral-400">Revenue captured</p>
               <p className="text-2xl font-bold">
@@ -307,7 +306,10 @@ export default function CourseOrdersPage() {
   );
 }
 
-function useReadyFlash(targetReadyStartAt: string, targetReadyEndAt: string): boolean {
+function useReadyFlash(
+  targetReadyStartAt: string,
+  targetReadyEndAt: string,
+): boolean {
   const [flashOn, setFlashOn] = useState(false);
   const readyStartMs = new Date(targetReadyStartAt).getTime();
   const readyEndMs = new Date(targetReadyEndAt).getTime();
@@ -337,7 +339,10 @@ function OrderCard({
   actions: { label: string; status: string }[];
   onUpdateStatus: (orderId: string, status: string) => void;
 }) {
-  const flashOn = useReadyFlash(order.target_ready_start_at, order.target_ready_end_at);
+  const flashOn = useReadyFlash(
+    order.target_ready_start_at,
+    order.target_ready_end_at,
+  );
 
   return (
     <div
@@ -367,12 +372,10 @@ function OrderCard({
       </div>
 
       <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
-        <span className="font-medium">
-          {abbreviateName(order.golfer_name)}
-        </span>
+        <span className="font-medium">{abbreviateName(order.golfer_name)}</span>
         <span className="text-neutral-600">•</span>
         <span className="text-neutral-300">
-          {formatTime(order.tee_time_starts_at)}
+          Tee Time:{formatTime(order.tee_time_starts_at)}
         </span>
         <span className="text-neutral-600">•</span>
         <span className="rounded bg-neutral-800 px-2 py-0.5 text-xs text-neutral-300">
@@ -496,7 +499,9 @@ function SimpleOrderColumn({
                   {actions.map((action) => (
                     <button
                       key={action.status}
-                      onClick={() => onUpdateStatus(order.order_id, action.status)}
+                      onClick={() =>
+                        onUpdateStatus(order.order_id, action.status)
+                      }
                       className="rounded-lg bg-green-500 px-3 py-1.5 text-xs font-semibold text-black"
                     >
                       {action.label}

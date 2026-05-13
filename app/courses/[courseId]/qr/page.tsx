@@ -9,49 +9,37 @@ export default function CourseQRPage() {
   const courseId = params.courseId as string;
 
   const [orderUrl, setOrderUrl] = useState("");
-  const [qrSize, setQrSize] = useState(280);
 
   useEffect(() => {
     const base =
-      process.env.NEXT_PUBLIC_APP_URL || "https://api.foreturniq.com";
+      process.env.NEXT_PUBLIC_APP_URL || "https://app.foreturniq.com";
     setOrderUrl(`${base}/courses/${courseId}/order`);
   }, [courseId]);
 
-  useEffect(() => {
-    const update = () => {
-      // subtract main px-6 (48) + outer border-4+p-8 (72) + inner border-2+p-5 (44) = 164px overhead
-      const size = Math.min(280, window.innerWidth - 164);
-      setQrSize(Math.max(size, 160));
-    };
-    update();
-    window.addEventListener("resize", update);
-    return () => window.removeEventListener("resize", update);
-  }, []);
-
   return (
     <main className="min-h-screen bg-white px-6 py-10 text-black">
-      <div className="mx-auto max-w-lg rounded-3xl border-4 border-black p-6 text-center sm:p-8">
+      <div className="mx-auto max-w-lg rounded-3xl border-4 border-black p-8 text-center">
         <p className="text-sm font-bold uppercase tracking-[0.3em] text-green-700">
           Foreturn IQ
         </p>
 
-        <h1 className="mt-5 text-3xl font-black uppercase leading-tight sm:text-5xl">
+        <h1 className="mt-5 text-5xl font-black uppercase leading-tight">
           Skip the Wait
           <br />
           at the Turn
         </h1>
 
-        <p className="mt-5 text-lg font-semibold text-neutral-700 sm:text-xl">
+        <p className="mt-5 text-xl font-semibold text-neutral-700">
           Order food & drinks from your phone
         </p>
 
         {orderUrl && (
-          <div className="mt-8 inline-block rounded-3xl border-2 border-black bg-white p-4 sm:p-5">
-            <QRCodeCanvas value={orderUrl} size={qrSize} marginSize={1} />
+          <div className="mt-8 inline-block rounded-3xl border-2 border-black bg-white p-5">
+            <QRCodeCanvas value={orderUrl} size={330} marginSize={1} />
           </div>
         )}
 
-        <p className="mt-6 text-base font-bold sm:text-lg">
+        <p className="mt-6 text-lg font-bold">
           Pay ahead • Pick up at the turn
         </p>
 
