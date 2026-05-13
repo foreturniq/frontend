@@ -307,6 +307,27 @@ export default function CourseOrdersPage() {
   );
 }
 
+function useReadyFlash(targetReadyStartAt: string, targetReadyEndAt: string): boolean {
+  const [flashOn, setFlashOn] = useState(false);
+  const readyStartMs = new Date(targetReadyStartAt).getTime();
+  const readyEndMs = new Date(targetReadyEndAt).getTime();
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const now = Date.now();
+      const inWindow = now >= readyStartMs - 5 * 60 * 1000 && now <= readyEndMs;
+      if (inWindow) {
+        setFlashOn((f) => !f);
+      } else {
+        setFlashOn(false);
+      }
+    }, 700);
+    return () => clearInterval(interval);
+  }, [readyStartMs, readyEndMs]);
+
+  return flashOn;
+}
+
 function OrderCard({
   order,
   actions,
@@ -316,8 +337,16 @@ function OrderCard({
   actions: { label: string; status: string }[];
   onUpdateStatus: (orderId: string, status: string) => void;
 }) {
+  const flashOn = useReadyFlash(order.target_ready_start_at, order.target_ready_end_at);
+
   return (
-    <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4">
+    <div
+      className={`rounded-xl border p-4 transition-colors duration-200 ${
+        flashOn
+          ? "border-amber-400 bg-amber-950/25 shadow-lg shadow-amber-500/10"
+          : "border-neutral-800 bg-neutral-950"
+      }`}
+    >
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-xs uppercase tracking-wide text-green-400">
