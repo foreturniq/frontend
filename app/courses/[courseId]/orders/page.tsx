@@ -371,17 +371,21 @@ function OrderCard({
         </div>
       </div>
 
-      <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
-        <span className="font-medium">{abbreviateName(order.golfer_name)}</span>
-        <span className="text-neutral-600">•</span>
-        <span className="text-neutral-300">
-          <br>
-          Tee Time:{formatTime(order.tee_time_starts_at)}
-        </span>
-        <span className="text-neutral-600">•</span>
-        <span className="rounded bg-neutral-800 px-2 py-0.5 text-xs text-neutral-300">
-          {ORDER_TYPE_LABELS[order.order_type] ?? order.order_type}
-        </span>
+      <div className="mt-3 space-y-1 text-sm">
+        <p className="font-medium">{abbreviateName(order.golfer_name)}</p>
+        <p className="text-neutral-400">
+          <span className="text-neutral-500">Tee Time</span>{" "}
+          <span className="text-neutral-200">{formatTime(order.tee_time_starts_at)}</span>
+        </p>
+        <p className="text-neutral-400">
+          <span className="rounded bg-neutral-800 px-2 py-0.5 text-xs text-neutral-300">
+            {ORDER_TYPE_LABELS[order.order_type] ?? order.order_type}
+          </span>{" "}
+          <span className="text-xs text-neutral-500">
+            Desired pickup:{" "}
+            <span className="text-neutral-300">{formatTime(order.predicted_arrival_at)}</span>
+          </span>
+        </p>
       </div>
 
       <div className="mt-3 rounded-lg bg-neutral-900 p-3 space-y-1">
