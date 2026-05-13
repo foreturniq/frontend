@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 
 type OrderItem = {
@@ -96,83 +96,43 @@ export default function CourseOrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [lastRefreshedAt, setLastRefreshedAt] = useState<string | null>(null);
-  const [refreshing, setRefreshing] = useState(false);
+  const [connected, setConnected] = useState(false);
 
-  async function fetchCourse(courseId: string) {
-    const res = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/courses/${courseId}`,
-      {
-        method: "GET",
-        headers: { "Content-Type": "application/json" },
-      },
+  // Load course name
+  useEffect(() => {
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/courses/${courseId}`)
+      .then((r) => r.json())
+      .then((d) => setCourseName(d.name))
+      .catch(console.error);
+  }, [courseId]);
+
+  // SSE stream
+  useEffect(() => {
+    const es = new EventSource(
+      `${process.env.NEXT_PUBLIC_API_URL}/courses/${courseId}/orders/stream`,
     );
 
-    const data = await res.json();
-    return data.name;
-  }
+    es.onopen = () => setConnected(true);
 
-  const fetchOrders = useCallback(async () => {
-    const API_URL = process.env.NEXT_PUBLIC_API_URL;
-
-    if (!API_URL) {
-      console.error("NEXT_PUBLIC_API_URL is missing.");
-    }
-
-    setRefreshing(true);
-
-    try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/courses/${courseId}/orders?t=${Date.now()}`,
-        { cache: "no-store" },
-      );
-
-      const data = await res.json();
-
-      setOrders(data);
+    es.onmessage = (e) => {
+      setOrders(JSON.parse(e.data));
       setLoading(false);
       setLastRefreshedAt(new Date().toLocaleTimeString());
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setRefreshing(false);
-    }
+    };
+
+    es.onerror = () => setConnected(false);
+
+    return () => es.close();
   }, [courseId]);
 
   async function updateStatus(orderId: string, status: string) {
     await fetch(`${process.env.NEXT_PUBLIC_API_URL}/orders/${orderId}/status`, {
       method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status }),
     });
-
-    fetchOrders();
+    // No manual refetch needed — the SSE stream will push the update within 3s
   }
-
-  useEffect(() => {
-    fetchOrders();
-
-    const interval = setInterval(() => {
-      fetchOrders();
-    }, 10000);
-
-    return () => clearInterval(interval);
-  }, [fetchOrders]);
-
-  useEffect(() => {
-    if (!courseId) return;
-
-    const loadCourse = async () => {
-      try {
-        const name = await fetchCourse(courseId);
-        setCourseName(name);
-      } catch (err) {
-        console.error(err);
-      }
-    };
-    loadCourse();
-  }, [courseId]);
 
   const today = new Date().toDateString();
 
@@ -222,22 +182,19 @@ export default function CourseOrdersPage() {
               Manage incoming golfer orders for this course.
             </p>
             <p className="mt-2 text-sm text-neutral-500 flex items-center gap-2">
-              Last refreshed: {lastRefreshedAt ?? "never"}
-              {refreshing && (
-                <span className="h-2 w-2 rounded-full bg-green-400 animate-pulse" />
-              )}
+              Last updated: {lastRefreshedAt ?? "connecting..."}
+              <span
+                className={`h-2 w-2 rounded-full ${
+                  connected ? "bg-green-400 animate-pulse" : "bg-neutral-600"
+                }`}
+              />
+              <span className={connected ? "text-green-400" : "text-neutral-600"}>
+                {connected ? "Live" : "Reconnecting..."}
+              </span>
             </p>
           </div>
 
           <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={fetchOrders}
-              disabled={refreshing}
-              className="rounded-lg border border-neutral-700 px-4 py-2 text-sm font-semibold text-neutral-200 disabled:opacity-50"
-            >
-              {refreshing ? "Refreshing..." : "Refresh"}
-            </button>
 
             <div className="rounded-xl border border-neutral-800 bg-neutral-900 p-4">
               <p className="text-sm text-neutral-400">Revenue captured</p>
