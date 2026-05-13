@@ -166,6 +166,10 @@ function CourseCard({
     { label: "Order URL", url: `${appUrl}/courses/${course.id}/order` },
   ];
 
+  const adminLinks = [
+    { label: "Manage Offers", url: `/admin/courses/${course.id}/offers` },
+  ];
+
   return (
     <div
       className={`rounded-2xl border p-5 ${
@@ -185,6 +189,15 @@ function CourseCard({
       </div>
 
       <div className="mt-4 flex flex-wrap gap-3">
+        {adminLinks.map((link) => (
+          <a
+            key={link.label}
+            href={link.url}
+            className="rounded-lg bg-neutral-800 px-3 py-1.5 text-sm font-medium text-neutral-200 hover:bg-neutral-700"
+          >
+            {link.label}
+          </a>
+        ))}
         {links.map((link) => (
           <a
             key={link.label}
