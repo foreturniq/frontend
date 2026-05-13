@@ -334,12 +334,25 @@ function OrderCard({
 }: {
   order: Order;
   actions: { label: string; status: string }[];
-  onUpdateStatus: (orderId: string, status: string) => void;
+  onUpdateStatus: (orderId: string, status: string) => Promise<void>;
 }) {
   const flashOn = useReadyFlash(
     order.target_ready_start_at,
     order.target_ready_end_at,
   );
+  const [pendingStatus, setPendingStatus] = useState<string | null>(null);
+
+  const PENDING_LABELS: Record<string, string> = {
+    fulfilled: "Fulfilling...",
+    refunded: "Refunding...",
+    canceled: "Canceling...",
+  };
+
+  async function handleAction(status: string) {
+    setPendingStatus(status);
+    await onUpdateStatus(order.order_id, status);
+    setPendingStatus(null);
+  }
 
   return (
     <div
@@ -426,15 +439,26 @@ function OrderCard({
       </div>
 
       <div className="mt-4 flex flex-wrap gap-2">
-        {actions.map((action) => (
-          <button
-            key={action.status}
-            onClick={() => onUpdateStatus(order.order_id, action.status)}
-            className="rounded-lg bg-green-500 px-3 py-2 text-sm font-semibold text-black"
-          >
-            {action.label}
-          </button>
-        ))}
+        {actions.map((action) => {
+          const isThisPending = pendingStatus === action.status;
+          const anyPending = pendingStatus !== null;
+          return (
+            <button
+              key={action.status}
+              onClick={() => handleAction(action.status)}
+              disabled={anyPending}
+              className={`rounded-lg px-3 py-2 text-sm font-semibold transition-colors ${
+                isThisPending
+                  ? "bg-neutral-600 text-neutral-300 cursor-not-allowed"
+                  : anyPending
+                  ? "bg-neutral-800 text-neutral-500 cursor-not-allowed"
+                  : "bg-green-500 text-black"
+              }`}
+            >
+              {isThisPending ? PENDING_LABELS[action.status] ?? action.label : action.label}
+            </button>
+          );
+        })}
       </div>
     </div>
   );
@@ -451,7 +475,7 @@ function SimpleOrderColumn({
   orders: Order[];
   emptyText: string;
   actions: { label: string; status: string }[];
-  onUpdateStatus: (orderId: string, status: string) => void;
+  onUpdateStatus: (orderId: string, status: string) => Promise<void>;
 }) {
   return (
     <section className="rounded-2xl border border-neutral-800 bg-neutral-900/60 p-4">
