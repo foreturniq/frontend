@@ -25,6 +25,21 @@ type LastOrder = {
   items: LastOrderItem[];
 };
 
+type ActiveOrderItem = {
+  item_name: string;
+  quantity: number;
+  line_total_cents: number;
+};
+
+type ActiveOrder = {
+  order_id: string;
+  pickup_code: string;
+  status: string;
+  order_type: string;
+  total_cents: number;
+  items: ActiveOrderItem[];
+};
+
 type OrderPage = {
   tee_time_id: string;
   course_name: string;
@@ -34,6 +49,7 @@ type OrderPage = {
   service_fee_cents: number;
   service_fee_label: string;
   last_order: LastOrder | null;
+  active_orders: ActiveOrder[];
 };
 
 type Cart = Record<string, number>;
@@ -200,6 +216,55 @@ export default function TeeTimeOrderPage() {
         <p className="mt-2 text-neutral-400">
           Tee time: {new Date(data.starts_at).toLocaleString()}
         </p>
+
+        {data.active_orders?.length > 0 && (
+          <div className="mt-8 space-y-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-green-400">
+              Your Orders
+            </p>
+            {data.active_orders.map((order) => (
+              <div
+                key={order.order_id}
+                className="rounded-xl border border-green-800 bg-green-950/20 p-4"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-xs uppercase tracking-wide text-green-400">
+                      Pickup Code
+                    </p>
+                    <p className="mt-1 text-3xl font-bold tracking-widest text-white">
+                      {order.pickup_code}
+                    </p>
+                    <p className="mt-1 text-xs text-neutral-400">
+                      Show this to the server
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <span
+                      className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+                        order.status === "fulfilled"
+                          ? "bg-green-500/20 text-green-400"
+                          : "bg-neutral-800 text-neutral-300"
+                      }`}
+                    >
+                      {order.status === "fulfilled" ? "Ready" : "Preparing"}
+                    </span>
+                    <p className="mt-2 text-sm font-bold text-white">
+                      ${(order.total_cents / 100).toFixed(2)}
+                    </p>
+                  </div>
+                </div>
+                <div className="mt-3 space-y-1">
+                  {order.items.map((item, i) => (
+                    <p key={i} className="text-sm text-neutral-300">
+                      {item.quantity}× {item.item_name}
+                    </p>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
 
         {data.last_order && (
           <div className="mt-8 rounded-xl border border-neutral-700 bg-neutral-900 p-4">
