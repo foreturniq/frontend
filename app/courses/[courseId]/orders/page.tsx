@@ -491,54 +491,93 @@ function SimpleOrderColumn({
           <p className="text-sm text-neutral-500">{emptyText}</p>
         ) : (
           orders.map((order) => (
-            <div
+            <SimpleOrderRow
               key={order.order_id}
-              className="rounded-xl border border-neutral-800 bg-neutral-950 p-3"
-            >
-              <div className="flex items-center justify-between gap-2">
-                <div>
-                  <p className="font-mono text-xs text-neutral-400">
-                    #{order.order_id.slice(0, 8)}
-                  </p>
-                  <p className="mt-0.5 text-sm font-medium">
-                    {displayName(order.golfer_name)}
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm font-bold text-neutral-300">
-                    {order.pickup_code}
-                  </p>
-                  <p className="text-xs text-neutral-500">
-                    {ORDER_TYPE_LABELS[order.order_type] ?? order.order_type}
-                  </p>
-                </div>
-              </div>
-              <div className="mt-2 space-y-1">
-                {order.items.map((item, i) => (
-                  <p key={i} className="text-xs text-neutral-400">
-                    {item.quantity}x {item.item_name}
-                  </p>
-                ))}
-              </div>
-              {actions.length > 0 && (
-                <div className="mt-3 flex gap-2">
-                  {actions.map((action) => (
-                    <button
-                      key={action.status}
-                      onClick={() =>
-                        onUpdateStatus(order.order_id, action.status)
-                      }
-                      className="rounded-lg bg-green-500 px-3 py-1.5 text-xs font-semibold text-black"
-                    >
-                      {action.label}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
+              order={order}
+              actions={actions}
+              onUpdateStatus={onUpdateStatus}
+            />
           ))
         )}
       </div>
     </section>
+  );
+}
+
+function SimpleOrderRow({
+  order,
+  actions,
+  onUpdateStatus,
+}: {
+  order: Order;
+  actions: { label: string; status: string }[];
+  onUpdateStatus: (orderId: string, status: string) => Promise<void>;
+}) {
+  const [pendingStatus, setPendingStatus] = useState<string | null>(null);
+
+  const PENDING_LABELS: Record<string, string> = {
+    fulfilled: "Fulfilling...",
+    refunded: "Refunding...",
+    canceled: "Canceling...",
+  };
+
+  async function handleAction(status: string) {
+    setPendingStatus(status);
+    await onUpdateStatus(order.order_id, status);
+    setPendingStatus(null);
+  }
+
+  return (
+    <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-3">
+      <div className="flex items-center justify-between gap-2">
+        <div>
+          <p className="font-mono text-xs text-neutral-400">
+            #{order.order_id.slice(0, 8)}
+          </p>
+          <p className="mt-0.5 text-sm font-medium">
+            {displayName(order.golfer_name)}
+          </p>
+        </div>
+        <div className="text-right">
+          <p className="text-sm font-bold text-neutral-300">
+            {order.pickup_code}
+          </p>
+          <p className="text-xs text-neutral-500">
+            {ORDER_TYPE_LABELS[order.order_type] ?? order.order_type}
+          </p>
+        </div>
+      </div>
+      <div className="mt-2 space-y-1">
+        {order.items.map((item, i) => (
+          <p key={i} className="text-xs text-neutral-400">
+            {item.quantity}x {item.item_name}
+          </p>
+        ))}
+      </div>
+      {actions.length > 0 && (
+        <div className="mt-3 flex gap-2">
+          {actions.map((action) => {
+            const isThisPending = pendingStatus === action.status;
+            const anyPending = pendingStatus !== null;
+            return (
+              <button
+                key={action.status}
+                onClick={() => handleAction(action.status)}
+                disabled={anyPending}
+                className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
+                  isThisPending
+                    ? "bg-neutral-600 text-neutral-300 cursor-not-allowed"
+                    : anyPending
+                    ? "bg-neutral-800 text-neutral-500 cursor-not-allowed"
+                    : "bg-green-500 text-black"
+                }`}
+              >
+                {isThisPending ? PENDING_LABELS[action.status] ?? action.label : action.label}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
   );
 }
