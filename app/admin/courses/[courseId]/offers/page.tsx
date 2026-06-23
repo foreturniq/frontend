@@ -278,7 +278,7 @@ export default function CourseOffersPage() {
                 />
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div>
                 <label className="block text-sm text-neutral-300">
                   Fulfillment
                 </label>
