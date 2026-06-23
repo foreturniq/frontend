@@ -155,8 +155,10 @@ export default function CourseOffersPage() {
     };
 
     if (description) body.description = description;
-    const fromMinutes = availableFrom === "null" ? null : parseInt(availableFrom);
-    const untilMinutes = availableUntil === "null" ? null : parseInt(availableUntil);
+    const fromMinutes =
+      availableFrom === "null" ? null : parseInt(availableFrom);
+    const untilMinutes =
+      availableUntil === "null" ? null : parseInt(availableUntil);
     if (fromMinutes !== null) body.available_from_minutes = fromMinutes;
     if (untilMinutes !== null) body.available_until_minutes = untilMinutes;
 
@@ -252,8 +254,7 @@ export default function CourseOffersPage() {
 
             <div>
               <label className="block text-sm text-neutral-300">
-                Description{" "}
-                <span className="text-neutral-500">(optional)</span>
+                Description <span className="text-neutral-500">(optional)</span>
               </label>
               <input
                 value={description}
@@ -277,7 +278,7 @@ export default function CourseOffersPage() {
                 />
               </div>
 
-              <div>
+              <div className="grid gap-4 sm:grid-cols-2">
                 <label className="block text-sm text-neutral-300">
                   Fulfillment
                 </label>
@@ -385,16 +386,18 @@ export default function CourseOffersPage() {
                             </p>
                           )}
                           <div className="mt-2 flex flex-wrap gap-2 text-xs text-neutral-500">
-                            <span>
-                              ${(offer.price_cents / 100).toFixed(2)}
-                            </span>
+                            <span>${(offer.price_cents / 100).toFixed(2)}</span>
                             <span>·</span>
                             <span>{offer.category}</span>
                             {offer.available_from_minutes != null && (
                               <>
                                 <span>·</span>
                                 <span>
-                                  from {minutesToLabel(offer.available_from_minutes, allWindowOptions())}
+                                  from{" "}
+                                  {minutesToLabel(
+                                    offer.available_from_minutes,
+                                    allWindowOptions(),
+                                  )}
                                 </span>
                               </>
                             )}
@@ -402,7 +405,11 @@ export default function CourseOffersPage() {
                               <>
                                 <span>·</span>
                                 <span>
-                                  until {minutesToLabel(offer.available_until_minutes, allWindowOptions())}
+                                  until{" "}
+                                  {minutesToLabel(
+                                    offer.available_until_minutes,
+                                    allWindowOptions(),
+                                  )}
                                 </span>
                               </>
                             )}
