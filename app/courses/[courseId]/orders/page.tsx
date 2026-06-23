@@ -103,27 +103,35 @@ export default function CourseOrdersPage() {
       .catch(console.error);
   }, [courseId]);
 
-  // SSE with polling fallback
+  // SSE with polling fallback.
+  // Corporate proxies can accept the SSE connection but silently buffer data,
+  // causing onopen to fire without onmessage ever arriving. We handle this by:
+  // 1. Fetching immediately on mount so data loads regardless of SSE.
+  // 2. Starting a 5s timeout after onopen — if no message arrives, fall back to polling.
   useEffect(() => {
     const API = process.env.NEXT_PUBLIC_API_URL;
     let pollInterval: ReturnType<typeof setInterval> | null = null;
+    let sseMessageTimeout: ReturnType<typeof setTimeout> | null = null;
+
+    async function poll() {
+      try {
+        const res = await fetch(
+          `${API}/courses/${courseId}/orders?t=${Date.now()}`,
+          { cache: "no-store" },
+        );
+        const data = await res.json();
+        setOrders(data);
+        setLoading(false);
+        setLastRefreshedAt(new Date().toLocaleTimeString());
+      } catch {
+        // will retry on next interval
+      }
+    }
 
     const startPolling = () => {
       if (pollInterval) return;
-      pollInterval = setInterval(async () => {
-        try {
-          const res = await fetch(
-            `${API}/courses/${courseId}/orders?t=${Date.now()}`,
-            { cache: "no-store" },
-          );
-          const data = await res.json();
-          setOrders(data);
-          setLoading(false);
-          setLastRefreshedAt(new Date().toLocaleTimeString());
-        } catch {
-          // server still spinning up, will retry
-        }
-      }, 10000);
+      poll();
+      pollInterval = setInterval(poll, 10000);
     };
 
     const stopPolling = () => {
@@ -133,20 +141,37 @@ export default function CourseOrdersPage() {
       }
     };
 
+    const clearSseTimeout = () => {
+      if (sseMessageTimeout) {
+        clearTimeout(sseMessageTimeout);
+        sseMessageTimeout = null;
+      }
+    };
+
+    // Load immediately — don't wait for SSE handshake
+    poll();
+
     const es = new EventSource(`${API}/courses/${courseId}/orders/stream`);
 
     es.onopen = () => {
-      setConnected(true);
-      stopPolling();
+      // If no message arrives within 5s the proxy is buffering; fall back to polling
+      sseMessageTimeout = setTimeout(() => {
+        setConnected(false);
+        startPolling();
+      }, 5000);
     };
 
     es.onmessage = (e) => {
+      clearSseTimeout();
+      setConnected(true);
+      stopPolling();
       setOrders(JSON.parse(e.data));
       setLoading(false);
       setLastRefreshedAt(new Date().toLocaleTimeString());
     };
 
     es.onerror = () => {
+      clearSseTimeout();
       setConnected(false);
       startPolling();
     };
@@ -154,6 +179,7 @@ export default function CourseOrdersPage() {
     return () => {
       es.close();
       stopPolling();
+      clearSseTimeout();
     };
   }, [courseId]);
 
@@ -220,9 +246,9 @@ export default function CourseOrdersPage() {
                 }`}
               />
               <span
-                className={connected ? "text-green-400" : "text-neutral-600"}
+                className={connected ? "text-green-400" : "text-neutral-500"}
               >
-                {connected ? "Live" : "Reconnecting..."}
+                {connected ? "Live" : "Polling"}
               </span>
             </p>
           </div>
