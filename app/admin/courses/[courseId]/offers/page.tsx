@@ -21,32 +21,76 @@ const FULFILLMENT_OPTIONS = [
   { value: "after_round", label: "After Round" },
 ];
 
-const AVAILABLE_FROM_OPTIONS: { label: string; minutes: number | null }[] = [
-  { label: "Anytime", minutes: null },
-  { label: "7 days before", minutes: -10080 },
-  { label: "2 days before", minutes: -2880 },
-  { label: "24 hours before", minutes: -1440 },
-  { label: "4 hours before", minutes: -240 },
-  { label: "2 hours before", minutes: -120 },
-  { label: "At tee time", minutes: 0 },
-  { label: "At the turn (~1h 45m)", minutes: 105 },
-];
+type WindowOption = { label: string; minutes: number | null };
 
-const AVAILABLE_UNTIL_OPTIONS: { label: string; minutes: number | null }[] = [
-  { label: "Anytime", minutes: null },
-  { label: "30 min before tee time", minutes: -30 },
-  { label: "At tee time", minutes: 0 },
-  { label: "At the turn (~1h 45m)", minutes: 105 },
-  { label: "After round (~4h)", minutes: 240 },
-];
+const AVAILABILITY_OPTIONS: Record<
+  string,
+  { from: WindowOption[]; until: WindowOption[] }
+> = {
+  before_round: {
+    from: [
+      { label: "Anytime", minutes: null },
+      { label: "7 days before", minutes: -10080 },
+      { label: "2 days before", minutes: -2880 },
+      { label: "24 hours before", minutes: -1440 },
+      { label: "4 hours before", minutes: -240 },
+      { label: "2 hours before", minutes: -120 },
+    ],
+    until: [
+      { label: "Anytime", minutes: null },
+      { label: "2 hours before", minutes: -120 },
+      { label: "30 min before", minutes: -30 },
+      { label: "At tee time", minutes: 0 },
+    ],
+  },
+  at_turn: {
+    from: [
+      { label: "Anytime", minutes: null },
+      { label: "24 hours before", minutes: -1440 },
+      { label: "4 hours before", minutes: -240 },
+      { label: "2 hours before", minutes: -120 },
+      { label: "At tee time", minutes: 0 },
+    ],
+    until: [
+      { label: "Anytime", minutes: null },
+      { label: "At the turn (~1h 45m)", minutes: 105 },
+    ],
+  },
+  after_round: {
+    from: [
+      { label: "Anytime", minutes: null },
+      { label: "24 hours before", minutes: -1440 },
+      { label: "At tee time", minutes: 0 },
+      { label: "At the turn (~1h 45m)", minutes: 105 },
+    ],
+    until: [
+      { label: "Anytime", minutes: null },
+      { label: "After round (~4h)", minutes: 240 },
+    ],
+  },
+};
 
 function minutesToLabel(
   minutes: number | undefined,
-  options: { label: string; minutes: number | null }[],
+  options: WindowOption[],
 ): string {
   if (minutes == null) return "Anytime";
   const match = options.find((o) => o.minutes === minutes);
   return match ? match.label : `${minutes}m`;
+}
+
+function allWindowOptions(): WindowOption[] {
+  const seen = new Set<number | null>();
+  const result: WindowOption[] = [];
+  for (const group of Object.values(AVAILABILITY_OPTIONS)) {
+    for (const opt of [...group.from, ...group.until]) {
+      if (!seen.has(opt.minutes)) {
+        seen.add(opt.minutes);
+        result.push(opt);
+      }
+    }
+  }
+  return result;
 }
 
 export default function CourseOffersPage() {
@@ -62,6 +106,12 @@ export default function CourseOffersPage() {
   const [price, setPrice] = useState("");
   const [category, setCategory] = useState("");
   const [fulfillmentType, setFulfillmentType] = useState("before_round");
+
+  function handleFulfillmentChange(value: string) {
+    setFulfillmentType(value);
+    setAvailableFrom("null");
+    setAvailableUntil("null");
+  }
   const [availableFrom, setAvailableFrom] = useState<string>("null");
   const [availableUntil, setAvailableUntil] = useState<string>("null");
   const [submitting, setSubmitting] = useState(false);
@@ -233,7 +283,7 @@ export default function CourseOffersPage() {
                 </label>
                 <select
                   value={fulfillmentType}
-                  onChange={(e) => setFulfillmentType(e.target.value)}
+                  onChange={(e) => handleFulfillmentChange(e.target.value)}
                   className="mt-2 block w-full rounded-lg border border-neutral-700 bg-neutral-950 px-4 py-2.5 text-base"
                 >
                   {FULFILLMENT_OPTIONS.map((o) => (
@@ -255,7 +305,7 @@ export default function CourseOffersPage() {
                   onChange={(e) => setAvailableFrom(e.target.value)}
                   className="mt-2 block w-full rounded-lg border border-neutral-700 bg-neutral-950 px-4 py-2.5 text-base"
                 >
-                  {AVAILABLE_FROM_OPTIONS.map((o) => (
+                  {AVAILABILITY_OPTIONS[fulfillmentType].from.map((o) => (
                     <option key={String(o.minutes)} value={String(o.minutes)}>
                       {o.label}
                     </option>
@@ -272,7 +322,7 @@ export default function CourseOffersPage() {
                   onChange={(e) => setAvailableUntil(e.target.value)}
                   className="mt-2 block w-full rounded-lg border border-neutral-700 bg-neutral-950 px-4 py-2.5 text-base"
                 >
-                  {AVAILABLE_UNTIL_OPTIONS.map((o) => (
+                  {AVAILABILITY_OPTIONS[fulfillmentType].until.map((o) => (
                     <option key={String(o.minutes)} value={String(o.minutes)}>
                       {o.label}
                     </option>
@@ -344,7 +394,7 @@ export default function CourseOffersPage() {
                               <>
                                 <span>·</span>
                                 <span>
-                                  from {minutesToLabel(offer.available_from_minutes, AVAILABLE_FROM_OPTIONS)}
+                                  from {minutesToLabel(offer.available_from_minutes, allWindowOptions())}
                                 </span>
                               </>
                             )}
@@ -352,7 +402,7 @@ export default function CourseOffersPage() {
                               <>
                                 <span>·</span>
                                 <span>
-                                  until {minutesToLabel(offer.available_until_minutes, AVAILABLE_UNTIL_OPTIONS)}
+                                  until {minutesToLabel(offer.available_until_minutes, allWindowOptions())}
                                 </span>
                               </>
                             )}
