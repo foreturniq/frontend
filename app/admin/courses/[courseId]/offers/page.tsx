@@ -21,6 +21,34 @@ const FULFILLMENT_OPTIONS = [
   { value: "after_round", label: "After Round" },
 ];
 
+const AVAILABLE_FROM_OPTIONS: { label: string; minutes: number | null }[] = [
+  { label: "Anytime", minutes: null },
+  { label: "7 days before", minutes: -10080 },
+  { label: "2 days before", minutes: -2880 },
+  { label: "24 hours before", minutes: -1440 },
+  { label: "4 hours before", minutes: -240 },
+  { label: "2 hours before", minutes: -120 },
+  { label: "At tee time", minutes: 0 },
+  { label: "At the turn (~1h 45m)", minutes: 105 },
+];
+
+const AVAILABLE_UNTIL_OPTIONS: { label: string; minutes: number | null }[] = [
+  { label: "Anytime", minutes: null },
+  { label: "30 min before tee time", minutes: -30 },
+  { label: "At tee time", minutes: 0 },
+  { label: "At the turn (~1h 45m)", minutes: 105 },
+  { label: "After round (~4h)", minutes: 240 },
+];
+
+function minutesToLabel(
+  minutes: number | undefined,
+  options: { label: string; minutes: number | null }[],
+): string {
+  if (minutes == null) return "Anytime";
+  const match = options.find((o) => o.minutes === minutes);
+  return match ? match.label : `${minutes}m`;
+}
+
 export default function CourseOffersPage() {
   const params = useParams();
   const courseId = params.courseId as string;
@@ -34,8 +62,8 @@ export default function CourseOffersPage() {
   const [price, setPrice] = useState("");
   const [category, setCategory] = useState("");
   const [fulfillmentType, setFulfillmentType] = useState("before_round");
-  const [availableFrom, setAvailableFrom] = useState("");
-  const [availableUntil, setAvailableUntil] = useState("");
+  const [availableFrom, setAvailableFrom] = useState<string>("null");
+  const [availableUntil, setAvailableUntil] = useState<string>("null");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
@@ -63,7 +91,7 @@ export default function CourseOffersPage() {
     fetchOffers();
   }, [fetchOffers]);
 
-  async function handleCreate(e: React.FormEvent) {
+  async function handleCreate(e: React.SyntheticEvent<HTMLFormElement>) {
     e.preventDefault();
     setSubmitting(true);
     setError("");
@@ -77,8 +105,10 @@ export default function CourseOffersPage() {
     };
 
     if (description) body.description = description;
-    if (availableFrom !== "") body.available_from_minutes = parseInt(availableFrom);
-    if (availableUntil !== "") body.available_until_minutes = parseInt(availableUntil);
+    const fromMinutes = availableFrom === "null" ? null : parseInt(availableFrom);
+    const untilMinutes = availableUntil === "null" ? null : parseInt(availableUntil);
+    if (fromMinutes !== null) body.available_from_minutes = fromMinutes;
+    if (untilMinutes !== null) body.available_until_minutes = untilMinutes;
 
     const res = await fetch(`${API}/offers`, {
       method: "POST",
@@ -99,8 +129,8 @@ export default function CourseOffersPage() {
     setPrice("");
     setCategory("");
     setFulfillmentType("before_round");
-    setAvailableFrom("");
-    setAvailableUntil("");
+    setAvailableFrom("null");
+    setAvailableUntil("null");
     fetchOffers();
   }
 
@@ -218,30 +248,36 @@ export default function CourseOffersPage() {
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <label className="block text-sm text-neutral-300">
-                  Available from{" "}
-                  <span className="text-neutral-500">(minutes, optional)</span>
+                  Available from
                 </label>
-                <input
-                  type="number"
+                <select
                   value={availableFrom}
                   onChange={(e) => setAvailableFrom(e.target.value)}
-                  placeholder="e.g. -60"
                   className="mt-2 block w-full rounded-lg border border-neutral-700 bg-neutral-950 px-4 py-2.5 text-base"
-                />
+                >
+                  {AVAILABLE_FROM_OPTIONS.map((o) => (
+                    <option key={String(o.minutes)} value={String(o.minutes)}>
+                      {o.label}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div>
                 <label className="block text-sm text-neutral-300">
-                  Available until{" "}
-                  <span className="text-neutral-500">(minutes, optional)</span>
+                  Available until
                 </label>
-                <input
-                  type="number"
+                <select
                   value={availableUntil}
                   onChange={(e) => setAvailableUntil(e.target.value)}
-                  placeholder="e.g. 120"
                   className="mt-2 block w-full rounded-lg border border-neutral-700 bg-neutral-950 px-4 py-2.5 text-base"
-                />
+                >
+                  {AVAILABLE_UNTIL_OPTIONS.map((o) => (
+                    <option key={String(o.minutes)} value={String(o.minutes)}>
+                      {o.label}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
 
@@ -308,7 +344,7 @@ export default function CourseOffersPage() {
                               <>
                                 <span>·</span>
                                 <span>
-                                  from {offer.available_from_minutes}m
+                                  from {minutesToLabel(offer.available_from_minutes, AVAILABLE_FROM_OPTIONS)}
                                 </span>
                               </>
                             )}
@@ -316,7 +352,7 @@ export default function CourseOffersPage() {
                               <>
                                 <span>·</span>
                                 <span>
-                                  until {offer.available_until_minutes}m
+                                  until {minutesToLabel(offer.available_until_minutes, AVAILABLE_UNTIL_OPTIONS)}
                                 </span>
                               </>
                             )}
