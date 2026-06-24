@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
+import Link from "next/link";
 
 export default function CourseOrderEntryPage() {
   const router = useRouter();
@@ -146,6 +147,13 @@ export default function CourseOrderEntryPage() {
             {loading ? "Loading..." : "See available offers"}
           </button>
         </form>
+
+        <p className="mt-8 text-center text-sm text-neutral-500">
+          Already ordered?{" "}
+          <Link href="/my-orders" className="text-green-400 underline underline-offset-2">
+            Check your order status
+          </Link>
+        </p>
       </div>
     </main>
   );
