@@ -3,11 +3,18 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 
+type OrderItemCustomization = {
+  id: string;
+  label: string;
+  price_cents: number;
+};
+
 type OrderItem = {
   item_name: string;
   quantity: number;
   unit_price_cents: number;
   line_total_cents: number;
+  customizations: OrderItemCustomization[];
 };
 
 type Order = {
@@ -450,15 +457,31 @@ function OrderCard({
         <p className="text-xs uppercase tracking-wide text-neutral-500">
           Items
         </p>
-        <div className="mt-2 space-y-1">
+        <div className="mt-2 space-y-2">
           {order.items.map((item, index) => (
-            <div key={index} className="flex justify-between gap-3 text-sm">
-              <span>
-                {item.quantity}x {item.item_name}
-              </span>
-              <span className="text-neutral-400">
-                ${(item.line_total_cents / 100).toFixed(2)}
-              </span>
+            <div key={index}>
+              <div className="flex justify-between gap-3 text-sm">
+                <span>
+                  {item.quantity}x {item.item_name}
+                </span>
+                <span className="text-neutral-400">
+                  ${(item.line_total_cents / 100).toFixed(2)}
+                </span>
+              </div>
+              {item.customizations?.length > 0 && (
+                <div className="ml-3 mt-0.5 space-y-0.5">
+                  {item.customizations.map((c) => (
+                    <p key={c.id} className="text-xs text-neutral-500">
+                      {c.label}
+                      {c.price_cents > 0 && (
+                        <span className="ml-1 text-neutral-600">
+                          (+${(c.price_cents / 100).toFixed(2)})
+                        </span>
+                      )}
+                    </p>
+                  ))}
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -573,11 +596,22 @@ function SimpleOrderRow({
           </p>
         </div>
       </div>
-      <div className="mt-2 space-y-1">
+      <div className="mt-2 space-y-1.5">
         {order.items.map((item, i) => (
-          <p key={i} className="text-xs text-neutral-400">
-            {item.quantity}x {item.item_name}
-          </p>
+          <div key={i}>
+            <p className="text-xs text-neutral-400">
+              {item.quantity}x {item.item_name}
+            </p>
+            {item.customizations?.length > 0 && (
+              <div className="ml-3 mt-0.5 space-y-0.5">
+                {item.customizations.map((c) => (
+                  <p key={c.id} className="text-xs text-neutral-600">
+                    {c.label}
+                  </p>
+                ))}
+              </div>
+            )}
+          </div>
         ))}
       </div>
       {actions.length > 0 && (

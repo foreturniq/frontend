@@ -3,6 +3,13 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams } from "next/navigation";
 
+type OfferCustomization = {
+  id: string;
+  label: string;
+  price_cents: number;
+  sort_order: number;
+};
+
 type Offer = {
   id: string;
   name: string;
@@ -13,6 +20,7 @@ type Offer = {
   is_active: boolean;
   available_from_minutes?: number;
   available_until_minutes?: number;
+  customizations: OfferCustomization[];
 };
 
 const FULFILLMENT_OPTIONS = [
@@ -117,6 +125,12 @@ export default function CourseOffersPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
+  // Customization panel state
+  const [expandedOfferId, setExpandedOfferId] = useState<string | null>(null);
+  const [newCustomLabel, setNewCustomLabel] = useState("");
+  const [newCustomPrice, setNewCustomPrice] = useState("");
+  const [savingCustomization, setSavingCustomization] = useState(false);
+
   const API = process.env.NEXT_PUBLIC_API_URL;
 
   const fetchOffers = useCallback(async () => {
@@ -191,6 +205,42 @@ export default function CourseOffersPage() {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ is_active: !offer.is_active }),
+    });
+    fetchOffers();
+  }
+
+  function toggleCustomizationPanel(offerId: string) {
+    setExpandedOfferId(expandedOfferId === offerId ? null : offerId);
+    setNewCustomLabel("");
+    setNewCustomPrice("");
+  }
+
+  async function addCustomization(
+    e: React.SyntheticEvent<HTMLFormElement>,
+    offerId: string,
+  ) {
+    e.preventDefault();
+    setSavingCustomization(true);
+
+    const priceCents = newCustomPrice
+      ? Math.round(parseFloat(newCustomPrice) * 100)
+      : 0;
+
+    await fetch(`${API}/offers/${offerId}/customizations`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ label: newCustomLabel, price_cents: priceCents }),
+    });
+
+    setNewCustomLabel("");
+    setNewCustomPrice("");
+    setSavingCustomization(false);
+    fetchOffers();
+  }
+
+  async function deleteCustomization(offerId: string, customizationId: string) {
+    await fetch(`${API}/offers/${offerId}/customizations/${customizationId}`, {
+      method: "DELETE",
     });
     fetchOffers();
   }
@@ -372,60 +422,159 @@ export default function CourseOffersPage() {
                     {group.offers.map((offer) => (
                       <div
                         key={offer.id}
-                        className={`flex items-start justify-between gap-4 rounded-xl border p-4 ${
+                        className={`rounded-xl border ${
                           offer.is_active
                             ? "border-neutral-800 bg-neutral-900/60"
                             : "border-neutral-800/50 bg-neutral-900/20 opacity-50"
                         }`}
                       >
-                        <div>
-                          <p className="font-medium">{offer.name}</p>
-                          {offer.description && (
-                            <p className="mt-0.5 text-sm text-neutral-400">
-                              {offer.description}
-                            </p>
-                          )}
-                          <div className="mt-2 flex flex-wrap gap-2 text-xs text-neutral-500">
-                            <span>${(offer.price_cents / 100).toFixed(2)}</span>
-                            <span>·</span>
-                            <span>{offer.category}</span>
-                            {offer.available_from_minutes != null && (
-                              <>
-                                <span>·</span>
-                                <span>
-                                  from{" "}
-                                  {minutesToLabel(
-                                    offer.available_from_minutes,
-                                    allWindowOptions(),
-                                  )}
-                                </span>
-                              </>
+                        <div className="flex items-start justify-between gap-4 p-4">
+                          <div>
+                            <p className="font-medium">{offer.name}</p>
+                            {offer.description && (
+                              <p className="mt-0.5 text-sm text-neutral-400">
+                                {offer.description}
+                              </p>
                             )}
-                            {offer.available_until_minutes != null && (
-                              <>
-                                <span>·</span>
-                                <span>
-                                  until{" "}
-                                  {minutesToLabel(
-                                    offer.available_until_minutes,
-                                    allWindowOptions(),
-                                  )}
+                            <div className="mt-2 flex flex-wrap gap-2 text-xs text-neutral-500">
+                              <span>${(offer.price_cents / 100).toFixed(2)}</span>
+                              <span>·</span>
+                              <span>{offer.category}</span>
+                              {offer.available_from_minutes != null && (
+                                <>
+                                  <span>·</span>
+                                  <span>
+                                    from{" "}
+                                    {minutesToLabel(
+                                      offer.available_from_minutes,
+                                      allWindowOptions(),
+                                    )}
+                                  </span>
+                                </>
+                              )}
+                              {offer.available_until_minutes != null && (
+                                <>
+                                  <span>·</span>
+                                  <span>
+                                    until{" "}
+                                    {minutesToLabel(
+                                      offer.available_until_minutes,
+                                      allWindowOptions(),
+                                    )}
+                                  </span>
+                                </>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="flex shrink-0 gap-2">
+                            <button
+                              onClick={() => toggleCustomizationPanel(offer.id)}
+                              className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${
+                                expandedOfferId === offer.id
+                                  ? "bg-neutral-600 text-white"
+                                  : "bg-neutral-800 text-neutral-300 hover:bg-neutral-700"
+                              }`}
+                            >
+                              Customize
+                              {offer.customizations.length > 0 && (
+                                <span className="ml-1.5 rounded-full bg-neutral-700 px-1.5 py-0.5 text-neutral-300">
+                                  {offer.customizations.length}
                                 </span>
-                              </>
-                            )}
+                              )}
+                            </button>
+                            <button
+                              onClick={() => toggleActive(offer)}
+                              className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${
+                                offer.is_active
+                                  ? "bg-neutral-800 text-neutral-300 hover:bg-neutral-700"
+                                  : "bg-green-500/20 text-green-400 hover:bg-green-500/30"
+                              }`}
+                            >
+                              {offer.is_active ? "Deactivate" : "Activate"}
+                            </button>
                           </div>
                         </div>
 
-                        <button
-                          onClick={() => toggleActive(offer)}
-                          className={`shrink-0 rounded-lg px-3 py-1.5 text-xs font-semibold ${
-                            offer.is_active
-                              ? "bg-neutral-800 text-neutral-300 hover:bg-neutral-700"
-                              : "bg-green-500/20 text-green-400 hover:bg-green-500/30"
-                          }`}
-                        >
-                          {offer.is_active ? "Deactivate" : "Activate"}
-                        </button>
+                        {/* Customization panel */}
+                        {expandedOfferId === offer.id && (
+                          <div className="border-t border-neutral-800 px-4 pb-4 pt-4">
+                            <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                              Customization options
+                            </p>
+
+                            {offer.customizations.length === 0 ? (
+                              <p className="mb-3 text-sm text-neutral-600">
+                                No options yet.
+                              </p>
+                            ) : (
+                              <div className="mb-4 space-y-2">
+                                {offer.customizations.map((c) => (
+                                  <div
+                                    key={c.id}
+                                    className="flex items-center justify-between rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2"
+                                  >
+                                    <div className="flex items-center gap-3 text-sm">
+                                      <span className="text-neutral-200">
+                                        {c.label}
+                                      </span>
+                                      {c.price_cents > 0 ? (
+                                        <span className="text-xs text-green-400">
+                                          +${(c.price_cents / 100).toFixed(2)}
+                                        </span>
+                                      ) : (
+                                        <span className="text-xs text-neutral-600">
+                                          free
+                                        </span>
+                                      )}
+                                    </div>
+                                    <button
+                                      onClick={() =>
+                                        deleteCustomization(offer.id, c.id)
+                                      }
+                                      className="text-xs text-neutral-600 hover:text-red-400"
+                                    >
+                                      Remove
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+
+                            <form
+                              onSubmit={(e) => addCustomization(e, offer.id)}
+                              className="flex gap-2"
+                            >
+                              <input
+                                value={newCustomLabel}
+                                onChange={(e) =>
+                                  setNewCustomLabel(e.target.value)
+                                }
+                                required
+                                placeholder="e.g. Add bacon"
+                                className="flex-1 rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm"
+                              />
+                              <input
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                value={newCustomPrice}
+                                onChange={(e) =>
+                                  setNewCustomPrice(e.target.value)
+                                }
+                                placeholder="Price (optional)"
+                                className="w-36 rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm"
+                              />
+                              <button
+                                type="submit"
+                                disabled={savingCustomization}
+                                className="rounded-lg bg-green-500 px-3 py-2 text-sm font-semibold text-black disabled:opacity-50"
+                              >
+                                Add
+                              </button>
+                            </form>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>

@@ -3,6 +3,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 
+type OfferCustomization = {
+  id: string;
+  label: string;
+  price_cents: number;
+};
+
 type Offer = {
   id: string;
   name: string;
@@ -10,6 +16,7 @@ type Offer = {
   price_cents: number;
   category: string;
   fulfillment_type: string;
+  customizations: OfferCustomization[];
 };
 
 type LastOrderItem = {
@@ -52,7 +59,12 @@ type OrderPage = {
   active_orders: ActiveOrder[];
 };
 
-type Cart = Record<string, number>;
+// Each cart entry is one independent instance of an offer.
+type CartItem = {
+  key: string;
+  offerId: string;
+  selectedCustomizationIds: string[];
+};
 
 type OrderType = "before_round" | "at_turn" | "after_round";
 
@@ -75,13 +87,18 @@ const ORDER_TYPE_OPTIONS: { value: OrderType; label: string; hint: string }[] =
     },
   ];
 
+let nextKey = 0;
+function makeKey() {
+  return String(++nextKey);
+}
+
 export default function TeeTimeOrderPage() {
   const params = useParams();
   const teeTimeId = params.teeTimeId as string;
 
   const [data, setData] = useState<OrderPage | null>(null);
   const [orderType, setOrderType] = useState<OrderType>("before_round");
-  const [cart, setCart] = useState<Cart>({});
+  const [cart, setCart] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -106,43 +123,61 @@ export default function TeeTimeOrderPage() {
     );
   }, [data]);
 
-  const selectedItems = useMemo(() => {
-    if (!data) return [];
-
-    return data.offers
-      .filter((offer) => cart[offer.id] > 0)
-      .map((offer) => ({
-        ...offer,
-        quantity: cart[offer.id],
-        line_total_cents: offer.price_cents * cart[offer.id],
-      }));
-  }, [cart, data]);
-
-  const totalCents = selectedItems.reduce(
-    (sum, item) => sum + item.line_total_cents,
-    0,
-  );
-
-  function addToCart(offerId: string) {
-    setCart((prev) => ({
-      ...prev,
-      [offerId]: (prev[offerId] || 0) + 1,
-    }));
+  function offerById(offerId: string): Offer | undefined {
+    return data?.offers.find((o) => o.id === offerId);
   }
 
-  function removeFromCart(offerId: string) {
-    setCart((prev) => ({
+  function itemPrice(cartItem: CartItem): number {
+    const offer = offerById(cartItem.offerId);
+    if (!offer) return 0;
+    const customizationTotal = cartItem.selectedCustomizationIds.reduce(
+      (sum, id) => {
+        const c = offer.customizations.find((c) => c.id === id);
+        return sum + (c?.price_cents ?? 0);
+      },
+      0,
+    );
+    return offer.price_cents + customizationTotal;
+  }
+
+  const totalCents = cart.reduce((sum, item) => sum + itemPrice(item), 0);
+
+  function addToCart(offerId: string) {
+    setCart((prev) => [
       ...prev,
-      [offerId]: Math.max((prev[offerId] || 0) - 1, 0),
-    }));
+      { key: makeKey(), offerId, selectedCustomizationIds: [] },
+    ]);
+  }
+
+  function removeFromCart(key: string) {
+    setCart((prev) => prev.filter((item) => item.key !== key));
+  }
+
+  function toggleCustomization(key: string, customizationId: string) {
+    setCart((prev) =>
+      prev.map((item) => {
+        if (item.key !== key) return item;
+        const ids = item.selectedCustomizationIds;
+        const newIds = ids.includes(customizationId)
+          ? ids.filter((id) => id !== customizationId)
+          : [...ids, customizationId];
+        return { ...item, selectedCustomizationIds: newIds };
+      }),
+    );
   }
 
   function quickReorder() {
     if (!data?.last_order) return;
-    const newCart: Cart = {};
+    const newCart: CartItem[] = [];
     for (const item of data.last_order.items) {
       if (item.available) {
-        newCart[item.offer_id] = item.quantity;
+        for (let i = 0; i < item.quantity; i++) {
+          newCart.push({
+            key: makeKey(),
+            offerId: item.offer_id,
+            selectedCustomizationIds: [],
+          });
+        }
       }
     }
     setCart(newCart);
@@ -153,15 +188,14 @@ export default function TeeTimeOrderPage() {
 
     const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/orders`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         tee_time_id: teeTimeId,
         order_type: orderType,
-        items: selectedItems.map((item) => ({
-          offer_id: item.id,
-          quantity: item.quantity,
+        items: cart.map((item) => ({
+          offer_id: item.offerId,
+          quantity: 1,
+          customization_ids: item.selectedCustomizationIds,
         })),
       }),
     });
@@ -178,12 +212,8 @@ export default function TeeTimeOrderPage() {
       `${process.env.NEXT_PUBLIC_API_URL}/checkout/session`,
       {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          order_id: result.order_id,
-        }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ order_id: result.order_id }),
       },
     );
 
@@ -292,7 +322,9 @@ export default function TeeTimeOrderPage() {
                 <div
                   key={i}
                   className={`flex justify-between text-sm ${
-                    item.available ? "text-neutral-200" : "text-neutral-600 line-through"
+                    item.available
+                      ? "text-neutral-200"
+                      : "text-neutral-600 line-through"
                   }`}
                 >
                   <span>
@@ -303,7 +335,8 @@ export default function TeeTimeOrderPage() {
               ))}
               {data.last_order.items.some((i) => !i.available) && (
                 <p className="mt-2 text-xs text-neutral-500">
-                  Struck-through items are no longer available and won&apos;t be added.
+                  Struck-through items are no longer available and won&apos;t be
+                  added.
                 </p>
               )}
             </div>
@@ -336,94 +369,170 @@ export default function TeeTimeOrderPage() {
           {data.offers.length === 0 ? (
             <p className="text-neutral-400">No offers available right now.</p>
           ) : (
-            data.offers.map((offer) => (
-              <div
-                key={offer.id}
-                className="rounded-xl border border-neutral-800 bg-neutral-900 p-4"
-              >
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <h3 className="font-semibold">{offer.name}</h3>
+            data.offers.map((offer) => {
+              const instances = cart.filter(
+                (item) => item.offerId === offer.id,
+              );
 
-                    {offer.description && (
-                      <p className="mt-1 text-sm text-neutral-400">
-                        {offer.description}
+              return (
+                <div
+                  key={offer.id}
+                  className="rounded-xl border border-neutral-800 bg-neutral-900"
+                >
+                  <div className="flex items-start justify-between gap-4 p-4">
+                    <div>
+                      <h3 className="font-semibold">{offer.name}</h3>
+
+                      {offer.description && (
+                        <p className="mt-1 text-sm text-neutral-400">
+                          {offer.description}
+                        </p>
+                      )}
+
+                      <p className="mt-3 font-bold">
+                        ${(offer.price_cents / 100).toFixed(2)}
                       </p>
-                    )}
-
-                    <p className="mt-3 font-bold">
-                      ${(offer.price_cents / 100).toFixed(2)}
-                    </p>
-                  </div>
-
-                  <button
-                    onClick={() => addToCart(offer.id)}
-                    className="rounded-lg bg-green-500 px-3 py-2 text-sm font-semibold text-black"
-                  >
-                    Add
-                  </button>
-                </div>
-
-                {cart[offer.id] > 0 && (
-                  <div className="mt-4 flex items-center gap-3">
-                    <button
-                      onClick={() => removeFromCart(offer.id)}
-                      className="rounded bg-neutral-800 px-3 py-1"
-                    >
-                      -
-                    </button>
-
-                    <span>{cart[offer.id]}</span>
+                    </div>
 
                     <button
                       onClick={() => addToCart(offer.id)}
-                      className="rounded bg-neutral-800 px-3 py-1"
+                      className="shrink-0 rounded-lg bg-green-500 px-3 py-2 text-sm font-semibold text-black"
                     >
-                      +
+                      Add
                     </button>
                   </div>
-                )}
-              </div>
-            ))
+
+                  {instances.length > 0 && (
+                    <div className="border-t border-neutral-800 divide-y divide-neutral-800/60">
+                      {instances.map((cartItem, idx) => (
+                        <div key={cartItem.key} className="px-4 py-3">
+                          <div className="flex items-center justify-between">
+                            <p className="text-sm font-medium text-neutral-300">
+                              {offer.name}{" "}
+                              <span className="text-neutral-600">
+                                #{idx + 1}
+                              </span>
+                            </p>
+                            <div className="flex items-center gap-3">
+                              <p className="text-sm font-semibold">
+                                ${(itemPrice(cartItem) / 100).toFixed(2)}
+                              </p>
+                              <button
+                                onClick={() => removeFromCart(cartItem.key)}
+                                className="text-xs text-neutral-600 hover:text-red-400"
+                              >
+                                Remove
+                              </button>
+                            </div>
+                          </div>
+
+                          {offer.customizations.length > 0 && (
+                            <div className="mt-2 space-y-1.5">
+                              {offer.customizations.map((c) => {
+                                const checked =
+                                  cartItem.selectedCustomizationIds.includes(
+                                    c.id,
+                                  );
+                                return (
+                                  <label
+                                    key={c.id}
+                                    className="flex cursor-pointer items-center gap-2.5"
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={checked}
+                                      onChange={() =>
+                                        toggleCustomization(cartItem.key, c.id)
+                                      }
+                                      className="h-4 w-4 rounded border-neutral-600 bg-neutral-800 accent-green-500"
+                                    />
+                                    <span className="text-sm text-neutral-300">
+                                      {c.label}
+                                    </span>
+                                    {c.price_cents > 0 && (
+                                      <span className="text-xs text-green-400">
+                                        +$
+                                        {(c.price_cents / 100).toFixed(2)}
+                                      </span>
+                                    )}
+                                  </label>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })
           )}
         </div>
       </div>
 
-      {selectedItems.length > 0 && (
+      {cart.length > 0 && (
         <div className="fixed inset-x-0 bottom-0 border-t border-neutral-800 bg-neutral-950 p-4">
           <div className="mx-auto max-w-md">
-            <div className="mb-3 space-y-1.5 text-sm">
-              <div className="flex justify-between text-neutral-400">
-                <span>Subtotal</span>
-                <span>${(totalCents / 100).toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between text-neutral-400">
-                <span>Sales Tax (8%)</span>
-                <span>${(totalCents * 0.08 / 100).toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between text-neutral-400">
-                <span>
-                  Service Fee{" "}
-                  {data && (
-                    <span className="text-xs text-neutral-500">
-                      — {data.service_fee_label}
+            <div className="mb-3 space-y-1 text-sm">
+              {cart.map((cartItem) => {
+                const offer = offerById(cartItem.offerId);
+                if (!offer) return null;
+                const price = itemPrice(cartItem);
+                const customLabels = cartItem.selectedCustomizationIds
+                  .map(
+                    (id) => offer.customizations.find((c) => c.id === id)?.label,
+                  )
+                  .filter(Boolean) as string[];
+                return (
+                  <div
+                    key={cartItem.key}
+                    className="flex justify-between text-neutral-300"
+                  >
+                    <span>
+                      {offer.name}
+                      {customLabels.length > 0 && (
+                        <span className="text-neutral-500">
+                          {" "}
+                          ({customLabels.join(", ")})
+                        </span>
+                      )}
                     </span>
-                  )}
-                </span>
-                <span>
-                  {data?.service_fee_cents === 0
-                    ? "Free"
-                    : `$${((data?.service_fee_cents ?? 0) / 100).toFixed(2)}`}
-                </span>
-              </div>
-              <div className="flex justify-between border-t border-neutral-800 pt-1.5 font-bold text-white">
-                <span>Total</span>
-                <span>
-                  ${(
-                    (totalCents * 1.08 + (data?.service_fee_cents ?? 0)) /
-                    100
-                  ).toFixed(2)}
-                </span>
+                    <span>${(price / 100).toFixed(2)}</span>
+                  </div>
+                );
+              })}
+
+              <div className="border-t border-neutral-800 pt-1.5 space-y-1">
+                <div className="flex justify-between text-neutral-400">
+                  <span>Sales Tax (8%)</span>
+                  <span>${((totalCents * 0.08) / 100).toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-neutral-400">
+                  <span>
+                    Service Fee{" "}
+                    {data && (
+                      <span className="text-xs text-neutral-500">
+                        — {data.service_fee_label}
+                      </span>
+                    )}
+                  </span>
+                  <span>
+                    {data?.service_fee_cents === 0
+                      ? "Free"
+                      : `$${((data?.service_fee_cents ?? 0) / 100).toFixed(2)}`}
+                  </span>
+                </div>
+                <div className="flex justify-between border-t border-neutral-800 pt-1.5 font-bold text-white">
+                  <span>Total</span>
+                  <span>
+                    $
+                    {(
+                      (totalCents * 1.08 + (data?.service_fee_cents ?? 0)) /
+                      100
+                    ).toFixed(2)}
+                  </span>
+                </div>
               </div>
             </div>
 
