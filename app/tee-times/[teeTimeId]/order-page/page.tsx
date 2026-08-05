@@ -238,7 +238,10 @@ export default function TeeTimeOrderPage() {
 
   return (
     <main className="min-h-screen bg-neutral-950 text-white px-6 py-10">
-      <div className="mx-auto max-w-md pb-32">
+      <div
+        className="mx-auto max-w-md"
+        style={{ paddingBottom: cart.length > 0 ? `${220 + cart.length * 28}px` : "40px" }}
+      >
         <p className="text-sm text-green-400 font-medium">Foreturn IQ</p>
 
         <h1 className="mt-3 text-3xl font-bold">{data.course_name}</h1>
