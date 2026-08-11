@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 
 type OrderItemCustomization = {
@@ -49,12 +49,6 @@ const TIMING_SECTIONS: {
   badgeClass: string;
 }[] = [
   {
-    bucket: "prepare_now",
-    label: "Prepare Now",
-    borderClass: "border-orange-500",
-    badgeClass: "bg-orange-500/20 text-orange-300",
-  },
-  {
     bucket: "coming_up",
     label: "Coming Up Soon",
     borderClass: "border-yellow-500",
@@ -80,6 +74,44 @@ const TIMING_SECTIONS: {
   },
 ];
 
+// Shared across renders so the AudioContext persists (and stays "unlocked"
+// by the browser's autoplay policy) instead of being recreated per beep.
+let sharedAudioCtx: AudioContext | null = null;
+
+function getAudioContext(): AudioContext | null {
+  if (typeof window === "undefined") return null;
+  if (!sharedAudioCtx) {
+    const AudioCtx =
+      window.AudioContext ||
+      (window as unknown as { webkitAudioContext?: typeof AudioContext })
+        .webkitAudioContext;
+    if (!AudioCtx) return null;
+    sharedAudioCtx = new AudioCtx();
+  }
+  return sharedAudioCtx;
+}
+
+function playReadyBeep() {
+  const ctx = getAudioContext();
+  if (!ctx) return;
+
+  const beepAt = (offset: number) => {
+    const oscillator = ctx.createOscillator();
+    const gain = ctx.createGain();
+    oscillator.type = "sine";
+    oscillator.frequency.value = 880;
+    gain.gain.setValueAtTime(0.3, ctx.currentTime + offset);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + offset + 0.3);
+    oscillator.connect(gain);
+    gain.connect(ctx.destination);
+    oscillator.start(ctx.currentTime + offset);
+    oscillator.stop(ctx.currentTime + offset + 0.3);
+  };
+
+  beepAt(0);
+  beepAt(0.35);
+}
+
 function formatTime(iso: string): string {
   if (!iso) return "—";
   return new Date(iso).toLocaleTimeString([], {
@@ -101,6 +133,10 @@ export default function CourseOrdersPage() {
   const [loading, setLoading] = useState(true);
   const [lastRefreshedAt, setLastRefreshedAt] = useState<string | null>(null);
   const [connected, setConnected] = useState(false);
+  const [showRefunded, setShowRefunded] = useState(false);
+  const [soundEnabled, setSoundEnabled] = useState(true);
+  const prevFulfillNowIds = useRef<Set<string>>(new Set());
+  const hasLoadedOnce = useRef(false);
 
   // Load course name
   useEffect(() => {
@@ -201,6 +237,27 @@ export default function CourseOrdersPage() {
   const today = new Date().toDateString();
 
   const paid = orders.filter((o) => o.status === "paid");
+  const fulfillNow = paid.filter((o) => o.timing_bucket === "prepare_now");
+
+  // Beep when an order newly enters the Fulfill Now bucket. Skip the
+  // very first load so opening the dashboard doesn't immediately beep
+  // for orders that were already sitting there.
+  useEffect(() => {
+    const currentIds = new Set(fulfillNow.map((o) => o.order_id));
+    if (hasLoadedOnce.current) {
+      const hasNewOrder = [...currentIds].some(
+        (id) => !prevFulfillNowIds.current.has(id),
+      );
+      if (hasNewOrder && soundEnabled) {
+        playReadyBeep();
+      }
+    } else {
+      hasLoadedOnce.current = true;
+    }
+    prevFulfillNowIds.current = currentIds;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orders, soundEnabled]);
+
   const fulfilled = orders.filter(
     (o) =>
       o.status === "fulfilled" &&
@@ -261,6 +318,18 @@ export default function CourseOrdersPage() {
           </div>
 
           <div className="flex items-center gap-3">
+            <button
+              onClick={() => {
+                setSoundEnabled((prev) => {
+                  const next = !prev;
+                  if (next) getAudioContext()?.resume();
+                  return next;
+                });
+              }}
+              className="rounded-lg border border-neutral-700 px-3 py-2 text-sm text-neutral-300 hover:border-neutral-500"
+            >
+              {soundEnabled ? "Sound: On" : "Sound: Off"}
+            </button>
             <div className="rounded-xl border border-neutral-800 bg-neutral-900 p-4">
               <p className="text-sm text-neutral-400">Revenue captured</p>
               <p className="text-2xl font-bold">
@@ -269,6 +338,34 @@ export default function CourseOrdersPage() {
             </div>
           </div>
         </div>
+
+        {/* Fulfill Now — pulled out above the timing-bucket list for visibility */}
+        {fulfillNow.length > 0 && (
+          <section className="mt-8 rounded-2xl border-2 border-orange-500 bg-orange-950/20 p-6 shadow-lg shadow-orange-500/10">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <span className="h-3 w-3 rounded-full bg-orange-400 animate-pulse" />
+                <h2 className="text-2xl font-bold text-orange-300">
+                  Fulfill Now
+                </h2>
+              </div>
+              <span className="rounded-full bg-orange-500/20 px-4 py-1.5 text-lg font-bold text-orange-300">
+                {fulfillNow.length}
+              </span>
+            </div>
+
+            <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {fulfillNow.map((order) => (
+                <OrderCard
+                  key={order.order_id}
+                  order={order}
+                  actions={paidActions}
+                  onUpdateStatus={updateStatus}
+                />
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* Paid orders grouped by timing bucket */}
         <div className="mt-8 space-y-5">
@@ -323,13 +420,23 @@ export default function CourseOrdersPage() {
             onUpdateStatus={updateStatus}
           />
 
-          <SimpleOrderColumn
-            title="Refunded"
-            orders={refunded}
-            emptyText="No refunded orders yet."
-            actions={[]}
-            onUpdateStatus={updateStatus}
-          />
+          {showRefunded ? (
+            <SimpleOrderColumn
+              title="Refunded"
+              orders={refunded}
+              emptyText="No refunded orders yet."
+              actions={[]}
+              onUpdateStatus={updateStatus}
+              onHide={() => setShowRefunded(false)}
+            />
+          ) : (
+            <button
+              onClick={() => setShowRefunded(true)}
+              className="flex items-center justify-center rounded-2xl border border-dashed border-neutral-800 bg-neutral-900/30 p-4 text-sm text-neutral-500 hover:border-neutral-600 hover:text-neutral-300"
+            >
+              Show Refunded ({refunded.length})
+            </button>
+          )}
         </div>
       </div>
     </main>
@@ -519,20 +626,32 @@ function SimpleOrderColumn({
   emptyText,
   actions,
   onUpdateStatus,
+  onHide,
 }: {
   title: string;
   orders: Order[];
   emptyText: string;
   actions: { label: string; status: string }[];
   onUpdateStatus: (orderId: string, status: string) => Promise<void>;
+  onHide?: () => void;
 }) {
   return (
     <section className="rounded-2xl border border-neutral-800 bg-neutral-900/60 p-4">
       <div className="mb-4 flex items-center justify-between">
         <h2 className="text-lg font-semibold">{title}</h2>
-        <span className="rounded-full bg-neutral-800 px-3 py-1 text-sm text-neutral-300">
-          {orders.length}
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="rounded-full bg-neutral-800 px-3 py-1 text-sm text-neutral-300">
+            {orders.length}
+          </span>
+          {onHide && (
+            <button
+              onClick={onHide}
+              className="text-xs text-neutral-500 hover:text-neutral-300"
+            >
+              Hide
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="space-y-3">
