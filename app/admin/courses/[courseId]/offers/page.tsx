@@ -245,10 +245,34 @@ export default function CourseOffersPage() {
     fetchOffers();
   }
 
-  const grouped = FULFILLMENT_OPTIONS.map((opt) => ({
-    ...opt,
+  // Offers whose fulfillment_type doesn't match one of the known
+  // FULFILLMENT_OPTIONS values (e.g. legacy/seeded data using a different
+  // vocabulary) still need to show up somewhere instead of vanishing.
+  const knownFulfillmentValues = new Set(
+    FULFILLMENT_OPTIONS.map((opt) => opt.value),
+  );
+
+  const knownGroups = FULFILLMENT_OPTIONS.map((opt) => ({
+    key: opt.value,
+    label: opt.label,
     offers: offers.filter((o) => o.fulfillment_type === opt.value),
   })).filter((g) => g.offers.length > 0);
+
+  const unknownValues = Array.from(
+    new Set(
+      offers
+        .filter((o) => !knownFulfillmentValues.has(o.fulfillment_type))
+        .map((o) => o.fulfillment_type),
+    ),
+  ).sort();
+
+  const unknownGroups = unknownValues.map((value) => ({
+    key: value || "unknown",
+    label: value || "(no fulfillment type)",
+    offers: offers.filter((o) => o.fulfillment_type === value),
+  }));
+
+  const grouped = [...knownGroups, ...unknownGroups];
 
   return (
     <main className="min-h-screen bg-neutral-950 text-white px-6 py-10">
@@ -414,7 +438,7 @@ export default function CourseOffersPage() {
           ) : (
             <div className="mt-4 space-y-6">
               {grouped.map((group) => (
-                <div key={group.value}>
+                <div key={group.key}>
                   <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-neutral-500">
                     {group.label}
                   </p>
