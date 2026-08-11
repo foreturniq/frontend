@@ -354,7 +354,7 @@ export default function CourseOrdersPage() {
               </span>
             </div>
 
-            <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="mt-5 grid max-h-[36rem] gap-4 overflow-y-auto pr-1 sm:grid-cols-2 lg:grid-cols-3">
               {fulfillNow.map((order) => (
                 <OrderCard
                   key={order.order_id}
@@ -394,7 +394,7 @@ export default function CourseOrdersPage() {
                     </span>
                   </div>
 
-                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  <div className="grid max-h-[28rem] gap-4 overflow-y-auto pr-1 sm:grid-cols-2 lg:grid-cols-3">
                     {sectionOrders.map((order) => (
                       <OrderCard
                         key={order.order_id}
@@ -654,7 +654,7 @@ function SimpleOrderColumn({
         </div>
       </div>
 
-      <div className="space-y-3">
+      <div className="max-h-[28rem] space-y-3 overflow-y-auto pr-1">
         {orders.length === 0 ? (
           <p className="text-sm text-neutral-500">{emptyText}</p>
         ) : (
