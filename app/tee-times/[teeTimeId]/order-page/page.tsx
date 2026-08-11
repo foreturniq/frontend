@@ -410,7 +410,7 @@ export default function TeeTimeOrderPage() {
           </>
         ) : (
           <>
-            <div className="sticky top-0 z-10 -mx-6 mt-8 border-b border-neutral-800 bg-neutral-950/95 px-6 py-3 backdrop-blur">
+            <div className="sticky top-0 z-10 -mx-6 mt-8 flex h-14 items-center border-b border-neutral-800 bg-neutral-950/95 px-6 backdrop-blur">
               <div className="flex gap-2 overflow-x-auto">
                 {categories.map((cat) => (
                   <button
@@ -431,9 +431,11 @@ export default function TeeTimeOrderPage() {
                   ref={(el) => {
                     categorySectionRefs.current[cat] = el;
                   }}
-                  className="scroll-mt-20"
+                  className="scroll-mt-28"
                 >
-                  <h2 className="text-xl font-semibold">{cat}</h2>
+                  <h2 className="sticky top-14 z-[5] -mx-6 bg-neutral-950 px-6 py-2 text-xl font-semibold">
+                    {cat}
+                  </h2>
                   <div className="mt-4 space-y-4">
                     {offersByCategory[cat].map((offer) => {
                       const instances = cart.filter(
