@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 
 type OfferCustomization = {
@@ -125,6 +125,41 @@ export default function TeeTimeOrderPage() {
 
   function offerById(offerId: string): Offer | undefined {
     return data?.offers.find((o) => o.id === offerId);
+  }
+
+  const categorySectionRefs = useRef<Record<string, HTMLDivElement | null>>(
+    {},
+  );
+
+  // Offers already arrive sorted by category from the backend, so first
+  // appearance order doubles as display order.
+  const categories = useMemo(() => {
+    const seen = new Set<string>();
+    const result: string[] = [];
+    for (const offer of data?.offers ?? []) {
+      const cat = offer.category || "Other";
+      if (!seen.has(cat)) {
+        seen.add(cat);
+        result.push(cat);
+      }
+    }
+    return result;
+  }, [data]);
+
+  const offersByCategory = useMemo(() => {
+    const map: Record<string, Offer[]> = {};
+    for (const offer of data?.offers ?? []) {
+      const cat = offer.category || "Other";
+      (map[cat] ??= []).push(offer);
+    }
+    return map;
+  }, [data]);
+
+  function scrollToCategory(cat: string) {
+    categorySectionRefs.current[cat]?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
   }
 
   function itemPrice(cartItem: CartItem): number {
@@ -366,112 +401,147 @@ export default function TeeTimeOrderPage() {
           </div>
         </div>
 
-        <h2 className="mt-8 text-xl font-semibold">Available offers</h2>
+        {data.offers.length === 0 ? (
+          <>
+            <h2 className="mt-8 text-xl font-semibold">Available offers</h2>
+            <p className="mt-4 text-neutral-400">
+              No offers available right now.
+            </p>
+          </>
+        ) : (
+          <>
+            <div className="sticky top-0 z-10 -mx-6 mt-8 border-b border-neutral-800 bg-neutral-950/95 px-6 py-3 backdrop-blur">
+              <div className="flex gap-2 overflow-x-auto">
+                {categories.map((cat) => (
+                  <button
+                    key={cat}
+                    onClick={() => scrollToCategory(cat)}
+                    className="shrink-0 rounded-full border border-neutral-800 bg-neutral-900 px-3 py-1.5 text-sm font-medium text-neutral-300 hover:border-green-500 hover:text-white"
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
+            </div>
 
-        <div className="mt-4 space-y-4">
-          {data.offers.length === 0 ? (
-            <p className="text-neutral-400">No offers available right now.</p>
-          ) : (
-            data.offers.map((offer) => {
-              const instances = cart.filter(
-                (item) => item.offerId === offer.id,
-              );
-
-              return (
+            <div className="mt-4 space-y-8">
+              {categories.map((cat) => (
                 <div
-                  key={offer.id}
-                  className="rounded-xl border border-neutral-800 bg-neutral-900"
+                  key={cat}
+                  ref={(el) => {
+                    categorySectionRefs.current[cat] = el;
+                  }}
+                  className="scroll-mt-20"
                 >
-                  <div className="flex items-start justify-between gap-4 p-4">
-                    <div>
-                      <h3 className="font-semibold">{offer.name}</h3>
+                  <h2 className="text-xl font-semibold">{cat}</h2>
+                  <div className="mt-4 space-y-4">
+                    {offersByCategory[cat].map((offer) => {
+                      const instances = cart.filter(
+                        (item) => item.offerId === offer.id,
+                      );
 
-                      {offer.description && (
-                        <p className="mt-1 text-sm text-neutral-400">
-                          {offer.description}
-                        </p>
-                      )}
+                      return (
+                        <div
+                          key={offer.id}
+                          className="rounded-xl border border-neutral-800 bg-neutral-900"
+                        >
+                          <div className="flex items-start justify-between gap-4 p-4">
+                            <div>
+                              <h3 className="font-semibold">{offer.name}</h3>
 
-                      <p className="mt-3 font-bold">
-                        ${(offer.price_cents / 100).toFixed(2)}
-                      </p>
-                    </div>
+                              {offer.description && (
+                                <p className="mt-1 text-sm text-neutral-400">
+                                  {offer.description}
+                                </p>
+                              )}
 
-                    <button
-                      onClick={() => addToCart(offer.id)}
-                      className="shrink-0 rounded-lg bg-green-500 px-3 py-2 text-sm font-semibold text-black"
-                    >
-                      Add
-                    </button>
-                  </div>
-
-                  {instances.length > 0 && (
-                    <div className="border-t border-neutral-800 divide-y divide-neutral-800/60">
-                      {instances.map((cartItem, idx) => (
-                        <div key={cartItem.key} className="px-4 py-3">
-                          <div className="flex items-center justify-between">
-                            <p className="text-sm font-medium text-neutral-300">
-                              {offer.name}{" "}
-                              <span className="text-neutral-600">
-                                #{idx + 1}
-                              </span>
-                            </p>
-                            <div className="flex items-center gap-3">
-                              <p className="text-sm font-semibold">
-                                ${(itemPrice(cartItem) / 100).toFixed(2)}
+                              <p className="mt-3 font-bold">
+                                ${(offer.price_cents / 100).toFixed(2)}
                               </p>
-                              <button
-                                onClick={() => removeFromCart(cartItem.key)}
-                                className="text-xs text-neutral-600 hover:text-red-400"
-                              >
-                                Remove
-                              </button>
                             </div>
+
+                            <button
+                              onClick={() => addToCart(offer.id)}
+                              className="shrink-0 rounded-lg bg-green-500 px-3 py-2 text-sm font-semibold text-black"
+                            >
+                              Add
+                            </button>
                           </div>
 
-                          {offer.customizations.length > 0 && (
-                            <div className="mt-2 space-y-1.5">
-                              {offer.customizations.map((c) => {
-                                const checked =
-                                  cartItem.selectedCustomizationIds.includes(
-                                    c.id,
-                                  );
-                                return (
-                                  <label
-                                    key={c.id}
-                                    className="flex cursor-pointer items-center gap-2.5"
-                                  >
-                                    <input
-                                      type="checkbox"
-                                      checked={checked}
-                                      onChange={() =>
-                                        toggleCustomization(cartItem.key, c.id)
-                                      }
-                                      className="h-4 w-4 rounded border-neutral-600 bg-neutral-800 accent-green-500"
-                                    />
-                                    <span className="text-sm text-neutral-300">
-                                      {c.label}
-                                    </span>
-                                    {c.price_cents > 0 && (
-                                      <span className="text-xs text-green-400">
-                                        +$
-                                        {(c.price_cents / 100).toFixed(2)}
+                          {instances.length > 0 && (
+                            <div className="border-t border-neutral-800 divide-y divide-neutral-800/60">
+                              {instances.map((cartItem, idx) => (
+                                <div key={cartItem.key} className="px-4 py-3">
+                                  <div className="flex items-center justify-between">
+                                    <p className="text-sm font-medium text-neutral-300">
+                                      {offer.name}{" "}
+                                      <span className="text-neutral-600">
+                                        #{idx + 1}
                                       </span>
-                                    )}
-                                  </label>
-                                );
-                              })}
+                                    </p>
+                                    <div className="flex items-center gap-3">
+                                      <p className="text-sm font-semibold">
+                                        ${(itemPrice(cartItem) / 100).toFixed(2)}
+                                      </p>
+                                      <button
+                                        onClick={() => removeFromCart(cartItem.key)}
+                                        className="text-xs text-neutral-600 hover:text-red-400"
+                                      >
+                                        Remove
+                                      </button>
+                                    </div>
+                                  </div>
+
+                                  {offer.customizations.length > 0 && (
+                                    <div className="mt-2 space-y-1.5">
+                                      {offer.customizations.map((c) => {
+                                        const checked =
+                                          cartItem.selectedCustomizationIds.includes(
+                                            c.id,
+                                          );
+                                        return (
+                                          <label
+                                            key={c.id}
+                                            className="flex cursor-pointer items-center gap-2.5"
+                                          >
+                                            <input
+                                              type="checkbox"
+                                              checked={checked}
+                                              onChange={() =>
+                                                toggleCustomization(
+                                                  cartItem.key,
+                                                  c.id,
+                                                )
+                                              }
+                                              className="h-4 w-4 rounded border-neutral-600 bg-neutral-800 accent-green-500"
+                                            />
+                                            <span className="text-sm text-neutral-300">
+                                              {c.label}
+                                            </span>
+                                            {c.price_cents > 0 && (
+                                              <span className="text-xs text-green-400">
+                                                +$
+                                                {(c.price_cents / 100).toFixed(2)}
+                                              </span>
+                                            )}
+                                          </label>
+                                        );
+                                      })}
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
                             </div>
                           )}
                         </div>
-                      ))}
-                    </div>
-                  )}
+                      );
+                    })}
+                  </div>
                 </div>
-              );
-            })
-          )}
-        </div>
+              ))}
+            </div>
+          </>
+        )}
       </div>
 
       {cart.length > 0 && (
