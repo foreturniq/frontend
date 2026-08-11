@@ -504,6 +504,8 @@ function OrderCard({
     canceled: "Canceling...",
   };
 
+  const [lifted, setLifted] = useState(false);
+
   async function handleAction(status: string) {
     const confirmMessage = DESTRUCTIVE_CONFIRM_MESSAGES[status];
     if (confirmMessage && !window.confirm(confirmMessage)) return;
@@ -512,14 +514,8 @@ function OrderCard({
     setPendingStatus(null);
   }
 
-  return (
-    <div
-      className={`rounded-xl border p-4 transition-colors duration-200 ${
-        flashOn
-          ? "border-amber-400 bg-amber-950/25 shadow-lg shadow-amber-500/10"
-          : "border-neutral-800 bg-neutral-950"
-      }`}
-    >
+  const cardBody = (
+    <>
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-xs uppercase tracking-wide text-green-400">
@@ -612,7 +608,10 @@ function OrderCard({
         </div>
       </div>
 
-      <div className="mt-4 flex items-center justify-between gap-3">
+      <div
+        className="mt-4 flex items-center justify-between gap-3"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex flex-1 flex-wrap gap-2">
           {actions
             .filter((action) => action.status === "fulfilled")
@@ -651,7 +650,36 @@ function OrderCard({
             })}
         </div>
       </div>
-    </div>
+    </>
+  );
+
+  return (
+    <>
+      <div
+        onClick={() => setLifted(true)}
+        className={`cursor-pointer rounded-xl border p-4 transition-colors duration-200 ${
+          flashOn
+            ? "border-amber-400 bg-amber-950/25 shadow-lg shadow-amber-500/10"
+            : "border-neutral-800 bg-neutral-950"
+        } ${lifted ? "opacity-40" : "hover:border-neutral-600"}`}
+      >
+        {cardBody}
+      </div>
+
+      {lifted && (
+        <div
+          onClick={() => setLifted(false)}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-6"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="max-h-full w-full max-w-xl origin-center scale-110 overflow-y-auto rounded-2xl border-2 border-amber-400/60 bg-neutral-950 p-6 shadow-2xl transition-transform duration-150"
+          >
+            {cardBody}
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 
