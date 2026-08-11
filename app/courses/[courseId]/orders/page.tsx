@@ -613,7 +613,7 @@ function OrderCard({
       </div>
 
       <div className="mt-4 flex items-center justify-between gap-3">
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-1 flex-wrap gap-2">
           {actions
             .filter((action) => action.status === "fulfilled")
             .map((action) => {
@@ -624,7 +624,7 @@ function OrderCard({
                   key={action.status}
                   onClick={() => handleAction(action.status)}
                   disabled={anyPending}
-                  className={`rounded-lg px-3 py-2 text-sm font-semibold transition-colors ${actionButtonClass(action.status, isThisPending, anyPending)}`}
+                  className={`w-full rounded-lg px-3 py-2 text-sm font-semibold transition-colors ${actionButtonClass(action.status, isThisPending, anyPending)}`}
                 >
                   {isThisPending ? PENDING_LABELS[action.status] ?? action.label : action.label}
                 </button>
@@ -632,7 +632,7 @@ function OrderCard({
             })}
         </div>
 
-        <div className="flex flex-wrap justify-end gap-2 border-l border-neutral-800 pl-3">
+        <div className="flex shrink-0 flex-wrap justify-end gap-2 border-l border-neutral-800 pl-3">
           {actions
             .filter((action) => action.status !== "fulfilled")
             .map((action) => {
