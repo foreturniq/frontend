@@ -467,6 +467,22 @@ function useReadyFlash(
   return flashOn;
 }
 
+const DESTRUCTIVE_CONFIRM_MESSAGES: Record<string, string> = {
+  refunded: "Refund this order? This cannot be undone.",
+  canceled: "Cancel this order? This cannot be undone.",
+};
+
+function actionButtonClass(
+  status: string,
+  isThisPending: boolean,
+  anyPending: boolean,
+): string {
+  if (isThisPending) return "bg-neutral-600 text-neutral-300 cursor-not-allowed";
+  if (anyPending) return "bg-neutral-800 text-neutral-500 cursor-not-allowed";
+  if (status === "fulfilled") return "bg-green-500 text-black";
+  return "border border-red-900/60 bg-neutral-900 text-red-300 hover:bg-red-950/40";
+}
+
 function OrderCard({
   order,
   actions,
@@ -489,6 +505,8 @@ function OrderCard({
   };
 
   async function handleAction(status: string) {
+    const confirmMessage = DESTRUCTIVE_CONFIRM_MESSAGES[status];
+    if (confirmMessage && !window.confirm(confirmMessage)) return;
     setPendingStatus(status);
     await onUpdateStatus(order.order_id, status);
     setPendingStatus(null);
@@ -594,27 +612,44 @@ function OrderCard({
         </div>
       </div>
 
-      <div className="mt-4 flex flex-wrap gap-2">
-        {actions.map((action) => {
-          const isThisPending = pendingStatus === action.status;
-          const anyPending = pendingStatus !== null;
-          return (
-            <button
-              key={action.status}
-              onClick={() => handleAction(action.status)}
-              disabled={anyPending}
-              className={`rounded-lg px-3 py-2 text-sm font-semibold transition-colors ${
-                isThisPending
-                  ? "bg-neutral-600 text-neutral-300 cursor-not-allowed"
-                  : anyPending
-                  ? "bg-neutral-800 text-neutral-500 cursor-not-allowed"
-                  : "bg-green-500 text-black"
-              }`}
-            >
-              {isThisPending ? PENDING_LABELS[action.status] ?? action.label : action.label}
-            </button>
-          );
-        })}
+      <div className="mt-4 flex items-center justify-between gap-3">
+        <div className="flex flex-wrap gap-2">
+          {actions
+            .filter((action) => action.status === "fulfilled")
+            .map((action) => {
+              const isThisPending = pendingStatus === action.status;
+              const anyPending = pendingStatus !== null;
+              return (
+                <button
+                  key={action.status}
+                  onClick={() => handleAction(action.status)}
+                  disabled={anyPending}
+                  className={`rounded-lg px-3 py-2 text-sm font-semibold transition-colors ${actionButtonClass(action.status, isThisPending, anyPending)}`}
+                >
+                  {isThisPending ? PENDING_LABELS[action.status] ?? action.label : action.label}
+                </button>
+              );
+            })}
+        </div>
+
+        <div className="flex flex-wrap justify-end gap-2 border-l border-neutral-800 pl-3">
+          {actions
+            .filter((action) => action.status !== "fulfilled")
+            .map((action) => {
+              const isThisPending = pendingStatus === action.status;
+              const anyPending = pendingStatus !== null;
+              return (
+                <button
+                  key={action.status}
+                  onClick={() => handleAction(action.status)}
+                  disabled={anyPending}
+                  className={`rounded-lg px-3 py-2 text-sm font-semibold transition-colors ${actionButtonClass(action.status, isThisPending, anyPending)}`}
+                >
+                  {isThisPending ? PENDING_LABELS[action.status] ?? action.label : action.label}
+                </button>
+              );
+            })}
+        </div>
       </div>
     </div>
   );
@@ -690,6 +725,8 @@ function SimpleOrderRow({
   };
 
   async function handleAction(status: string) {
+    const confirmMessage = DESTRUCTIVE_CONFIRM_MESSAGES[status];
+    if (confirmMessage && !window.confirm(confirmMessage)) return;
     setPendingStatus(status);
     await onUpdateStatus(order.order_id, status);
     setPendingStatus(null);
@@ -734,7 +771,7 @@ function SimpleOrderRow({
         ))}
       </div>
       {actions.length > 0 && (
-        <div className="mt-3 flex gap-2">
+        <div className="mt-3 flex justify-end gap-2">
           {actions.map((action) => {
             const isThisPending = pendingStatus === action.status;
             const anyPending = pendingStatus !== null;
@@ -743,13 +780,7 @@ function SimpleOrderRow({
                 key={action.status}
                 onClick={() => handleAction(action.status)}
                 disabled={anyPending}
-                className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
-                  isThisPending
-                    ? "bg-neutral-600 text-neutral-300 cursor-not-allowed"
-                    : anyPending
-                    ? "bg-neutral-800 text-neutral-500 cursor-not-allowed"
-                    : "bg-green-500 text-black"
-                }`}
+                className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${actionButtonClass(action.status, isThisPending, anyPending)}`}
               >
                 {isThisPending ? PENDING_LABELS[action.status] ?? action.label : action.label}
               </button>
