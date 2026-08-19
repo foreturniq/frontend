@@ -634,7 +634,10 @@ export default function TeeTimeOrderPage() {
                           : "border-neutral-800 text-neutral-300"
                       }`}
                     >
-                      {pct}%
+                      <div>{pct}%</div>
+                      <div className="text-xs opacity-75">
+                        ${((Math.round((totalCents * pct) / 100)) / 100).toFixed(2)}
+                      </div>
                     </button>
                   ))}
                   <button
