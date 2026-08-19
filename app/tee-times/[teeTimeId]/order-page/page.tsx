@@ -53,8 +53,6 @@ type OrderPage = {
   starts_at: string;
   minutes_since_tee_time: number;
   offers: Offer[];
-  service_fee_cents: number;
-  service_fee_label: string;
   last_order: LastOrder | null;
   active_orders: ActiveOrder[];
 };
@@ -180,6 +178,9 @@ export default function TeeTimeOrderPage() {
   }
 
   const totalCents = cart.reduce((sum, item) => sum + itemPrice(item), 0);
+
+  // 5% of subtotal + $0.50 flat, uncapped — mirrors service.CalculateServiceFee on the backend.
+  const serviceFeeCents = Math.round(totalCents * 0.05) + 50;
 
   const tipCents = useMemo(() => {
     if (tipMode === "none") return 0;
@@ -604,17 +605,11 @@ export default function TeeTimeOrderPage() {
                 <div className="flex justify-between text-neutral-400">
                   <span>
                     Service Fee{" "}
-                    {data && (
-                      <span className="text-xs text-neutral-500">
-                        — {data.service_fee_label}
-                      </span>
-                    )}
+                    <span className="text-xs text-neutral-500">
+                      — 5% + $0.50
+                    </span>
                   </span>
-                  <span>
-                    {data?.service_fee_cents === 0
-                      ? "Free"
-                      : `$${((data?.service_fee_cents ?? 0) / 100).toFixed(2)}`}
-                  </span>
+                  <span>${(serviceFeeCents / 100).toFixed(2)}</span>
                 </div>
               </div>
 
@@ -690,9 +685,7 @@ export default function TeeTimeOrderPage() {
                 <span>
                   $
                   {(
-                    (totalCents * 1.08 +
-                      (data?.service_fee_cents ?? 0) +
-                      tipCents) /
+                    (totalCents * 1.08 + serviceFeeCents + tipCents) /
                     100
                   ).toFixed(2)}
                 </span>
