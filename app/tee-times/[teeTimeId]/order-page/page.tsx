@@ -595,7 +595,7 @@ export default function TeeTimeOrderPage() {
               ← Add more items
             </button>
 
-            <div className="mb-3 space-y-1 text-sm">
+            <div className="mb-3 space-y-1 text-base">
               {cart.map((cartItem) => {
                 const offer = offerById(cartItem.offerId);
                 if (!offer) return null;
@@ -633,7 +633,7 @@ export default function TeeTimeOrderPage() {
                   <span>Service Fee (5% + $0.50)</span>
                   <span>${(serviceFeeCents / 100).toFixed(2)}</span>
                 </div>
-                <p className="text-xs text-neutral-500">
+                <p className="text-sm text-neutral-500">
                   Covers payment processing — paid to Foreturn IQ, not the
                   course.
                 </p>
@@ -649,14 +649,14 @@ export default function TeeTimeOrderPage() {
                       key={pct}
                       type="button"
                       onClick={() => setTipMode(pct)}
-                      className={`flex-1 rounded-lg border px-2 py-2 text-sm font-medium ${
+                      className={`flex-1 rounded-lg border px-2 py-2 text-base font-medium ${
                         tipMode === pct
                           ? "border-green-500 bg-green-500/10 text-green-400"
                           : "border-neutral-800 text-neutral-300"
                       }`}
                     >
                       <div>{pct}%</div>
-                      <div className="text-xs opacity-75">
+                      <div className="text-sm opacity-75">
                         ${((Math.round((totalCents * pct) / 100)) / 100).toFixed(2)}
                       </div>
                     </button>
@@ -664,7 +664,7 @@ export default function TeeTimeOrderPage() {
                   <button
                     type="button"
                     onClick={() => setTipMode("custom")}
-                    className={`flex-1 rounded-lg border px-2 py-2 text-sm font-medium ${
+                    className={`flex-1 rounded-lg border px-2 py-2 text-base font-medium ${
                       tipMode === "custom"
                         ? "border-green-500 bg-green-500/10 text-green-400"
                         : "border-neutral-800 text-neutral-300"
@@ -695,7 +695,7 @@ export default function TeeTimeOrderPage() {
                       setTipMode("none");
                       setCustomTipDollars("");
                     }}
-                    className="text-xs text-neutral-500 underline"
+                    className="text-sm text-neutral-500 underline"
                   >
                     Remove tip
                   </button>
