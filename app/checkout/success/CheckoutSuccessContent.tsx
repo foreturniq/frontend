@@ -20,6 +20,7 @@ type Order = {
   subtotal_cents: number;
   sales_tax_cents: number;
   service_fee_cents: number;
+  tip_cents: number;
   total_cents: number;
   items: OrderItem[];
   pickup_code: string;
@@ -122,6 +123,13 @@ export default function CheckoutSuccessPage() {
                 <span>Service Fee</span>
                 <span>{formatCurrency(order.service_fee_cents)}</span>
               </div>
+
+              {order.tip_cents > 0 && (
+                <div className="flex justify-between">
+                  <span>Tip</span>
+                  <span>{formatCurrency(order.tip_cents)}</span>
+                </div>
+              )}
 
               <div className="flex justify-between font-semibold text-lg border-t pt-2">
                 <span>Total</span>

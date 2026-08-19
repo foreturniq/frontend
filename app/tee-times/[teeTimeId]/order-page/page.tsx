@@ -100,6 +100,10 @@ export default function TeeTimeOrderPage() {
   const [orderType, setOrderType] = useState<OrderType>("before_round");
   const [cart, setCart] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const [tipMode, setTipMode] = useState<"none" | 15 | 20 | 25 | "custom">(
+    "none",
+  );
+  const [customTipDollars, setCustomTipDollars] = useState("");
 
   useEffect(() => {
     fetch(
@@ -177,6 +181,17 @@ export default function TeeTimeOrderPage() {
 
   const totalCents = cart.reduce((sum, item) => sum + itemPrice(item), 0);
 
+  const tipCents = useMemo(() => {
+    if (tipMode === "none") return 0;
+    if (tipMode === "custom") {
+      const dollars = parseFloat(customTipDollars);
+      return Number.isFinite(dollars) && dollars > 0
+        ? Math.round(dollars * 100)
+        : 0;
+    }
+    return Math.round((totalCents * tipMode) / 100);
+  }, [tipMode, customTipDollars, totalCents]);
+
   function addToCart(offerId: string) {
     setCart((prev) => [
       ...prev,
@@ -248,7 +263,10 @@ export default function TeeTimeOrderPage() {
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ order_id: result.order_id }),
+        body: JSON.stringify({
+          order_id: result.order_id,
+          tip_cents: tipCents,
+        }),
       },
     );
 
@@ -598,16 +616,83 @@ export default function TeeTimeOrderPage() {
                       : `$${((data?.service_fee_cents ?? 0) / 100).toFixed(2)}`}
                   </span>
                 </div>
-                <div className="flex justify-between border-t border-neutral-800 pt-1.5 font-bold text-white">
-                  <span>Total</span>
-                  <span>
-                    $
-                    {(
-                      (totalCents * 1.08 + (data?.service_fee_cents ?? 0)) /
-                      100
-                    ).toFixed(2)}
-                  </span>
+              </div>
+
+              <div className="border-t border-neutral-800 pt-2 space-y-2">
+                <span className="text-neutral-400">
+                  Tip for {data?.course_name ?? "the course"}
+                </span>
+                <div className="flex gap-2">
+                  {([15, 20, 25] as const).map((pct) => (
+                    <button
+                      key={pct}
+                      type="button"
+                      onClick={() => setTipMode(pct)}
+                      className={`flex-1 rounded-lg border px-2 py-2 text-sm font-medium ${
+                        tipMode === pct
+                          ? "border-green-500 bg-green-500/10 text-green-400"
+                          : "border-neutral-800 text-neutral-300"
+                      }`}
+                    >
+                      {pct}%
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => setTipMode("custom")}
+                    className={`flex-1 rounded-lg border px-2 py-2 text-sm font-medium ${
+                      tipMode === "custom"
+                        ? "border-green-500 bg-green-500/10 text-green-400"
+                        : "border-neutral-800 text-neutral-300"
+                    }`}
+                  >
+                    Custom
+                  </button>
                 </div>
+                {tipMode === "custom" && (
+                  <div className="flex items-center gap-1 rounded-lg border border-neutral-800 px-3 py-2">
+                    <span className="text-neutral-500">$</span>
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      min="0"
+                      step="0.01"
+                      placeholder="0.00"
+                      value={customTipDollars}
+                      onChange={(e) => setCustomTipDollars(e.target.value)}
+                      className="w-full bg-transparent text-white outline-none"
+                    />
+                  </div>
+                )}
+                {tipMode !== "none" && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTipMode("none");
+                      setCustomTipDollars("");
+                    }}
+                    className="text-xs text-neutral-500 underline"
+                  >
+                    Remove tip
+                  </button>
+                )}
+                <div className="flex justify-between text-neutral-400">
+                  <span>Tip</span>
+                  <span>${(tipCents / 100).toFixed(2)}</span>
+                </div>
+              </div>
+
+              <div className="flex justify-between border-t border-neutral-800 pt-1.5 font-bold text-white">
+                <span>Total</span>
+                <span>
+                  $
+                  {(
+                    (totalCents * 1.08 +
+                      (data?.service_fee_cents ?? 0) +
+                      tipCents) /
+                    100
+                  ).toFixed(2)}
+                </span>
               </div>
             </div>
 
