@@ -98,6 +98,7 @@ export default function TeeTimeOrderPage() {
   const [orderType, setOrderType] = useState<OrderType>("before_round");
   const [cart, setCart] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const [showReview, setShowReview] = useState(false);
   const [tipMode, setTipMode] = useState<"none" | 15 | 20 | 25 | "custom">(
     "none",
   );
@@ -565,9 +566,35 @@ export default function TeeTimeOrderPage() {
         )}
       </div>
 
-      {cart.length > 0 && (
+      {cart.length > 0 && !showReview && (
+        <div className="fixed inset-x-0 bottom-0 z-20 border-t border-neutral-800 bg-neutral-950 p-4">
+          <div className="mx-auto flex max-w-md items-center justify-between gap-4">
+            <span className="text-sm text-neutral-400">
+              {cart.length} item{cart.length !== 1 ? "s" : ""} · $
+              {(totalCents / 100).toFixed(2)}
+            </span>
+            <button
+              type="button"
+              onClick={() => setShowReview(true)}
+              className="rounded-lg bg-green-500 px-5 py-2.5 font-semibold text-black"
+            >
+              Review Order
+            </button>
+          </div>
+        </div>
+      )}
+
+      {cart.length > 0 && showReview && (
         <div className="fixed inset-x-0 bottom-0 z-20 border-t border-neutral-800 bg-neutral-950 p-4">
           <div className="mx-auto max-w-md">
+            <button
+              type="button"
+              onClick={() => setShowReview(false)}
+              className="mb-2 text-sm text-neutral-400"
+            >
+              ← Add more items
+            </button>
+
             <div className="mb-3 space-y-1 text-sm">
               {cart.map((cartItem) => {
                 const offer = offerById(cartItem.offerId);
