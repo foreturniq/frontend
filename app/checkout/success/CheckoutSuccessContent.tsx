@@ -123,6 +123,10 @@ export default function CheckoutSuccessPage() {
                 <span>Service Fee</span>
                 <span>{formatCurrency(order.service_fee_cents)}</span>
               </div>
+              <p className="text-xs text-neutral-500">
+                Covers payment processing — paid to Foreturn IQ, not the
+                course.
+              </p>
 
               {order.tip_cents > 0 && (
                 <div className="flex justify-between">

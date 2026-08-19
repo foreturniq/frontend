@@ -603,14 +603,13 @@ export default function TeeTimeOrderPage() {
                   <span>${((totalCents * 0.08) / 100).toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-neutral-400">
-                  <span>
-                    Service Fee{" "}
-                    <span className="text-xs text-neutral-500">
-                      — 5% + $0.50
-                    </span>
-                  </span>
+                  <span>Service Fee (5% + $0.50)</span>
                   <span>${(serviceFeeCents / 100).toFixed(2)}</span>
                 </div>
+                <p className="text-xs text-neutral-500">
+                  Covers payment processing — paid to Foreturn IQ, not the
+                  course.
+                </p>
               </div>
 
               <div className="border-t border-neutral-800 pt-2 space-y-2">
