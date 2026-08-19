@@ -566,7 +566,7 @@ export default function TeeTimeOrderPage() {
       </div>
 
       {cart.length > 0 && (
-        <div className="fixed inset-x-0 bottom-0 border-t border-neutral-800 bg-neutral-950 p-4">
+        <div className="fixed inset-x-0 bottom-0 z-20 border-t border-neutral-800 bg-neutral-950 p-4">
           <div className="mx-auto max-w-md">
             <div className="mb-3 space-y-1 text-sm">
               {cart.map((cartItem) => {
