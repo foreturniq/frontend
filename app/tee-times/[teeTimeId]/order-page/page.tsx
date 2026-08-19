@@ -585,17 +585,19 @@ export default function TeeTimeOrderPage() {
       )}
 
       {cart.length > 0 && showReview && (
-        <div className="fixed inset-x-0 bottom-0 z-20 border-t border-neutral-800 bg-neutral-950 p-4">
-          <div className="mx-auto max-w-md">
+        <div className="fixed inset-0 z-20 flex flex-col bg-neutral-950">
+          <div className="border-b border-neutral-800 px-6 py-4">
             <button
               type="button"
               onClick={() => setShowReview(false)}
-              className="mb-2 text-sm text-neutral-400"
+              className="text-base text-neutral-400"
             >
               ← Add more items
             </button>
+          </div>
 
-            <div className="mb-3 space-y-1 text-base">
+          <div className="flex-1 overflow-y-auto px-6 py-4">
+            <div className="mx-auto max-w-md space-y-1 text-lg">
               {cart.map((cartItem) => {
                 const offer = offerById(cartItem.offerId);
                 if (!offer) return null;
@@ -619,19 +621,25 @@ export default function TeeTimeOrderPage() {
                         </span>
                       )}
                     </span>
-                    <span>${(price / 100).toFixed(2)}</span>
+                    <span className="font-semibold text-white">
+                      ${(price / 100).toFixed(2)}
+                    </span>
                   </div>
                 );
               })}
 
-              <div className="border-t border-neutral-800 pt-1.5 space-y-1">
+              <div className="mt-2 border-t border-neutral-800 pt-2 space-y-2">
                 <div className="flex justify-between text-neutral-400">
                   <span>Sales Tax (8%)</span>
-                  <span>${((totalCents * 0.08) / 100).toFixed(2)}</span>
+                  <span className="font-semibold text-white">
+                    ${((totalCents * 0.08) / 100).toFixed(2)}
+                  </span>
                 </div>
                 <div className="flex justify-between text-neutral-400">
                   <span>Service Fee (5% + $0.50)</span>
-                  <span>${(serviceFeeCents / 100).toFixed(2)}</span>
+                  <span className="font-semibold text-white">
+                    ${(serviceFeeCents / 100).toFixed(2)}
+                  </span>
                 </div>
                 <p className="text-sm text-neutral-500">
                   Covers payment processing — paid to Foreturn IQ, not the
@@ -639,7 +647,7 @@ export default function TeeTimeOrderPage() {
                 </p>
               </div>
 
-              <div className="border-t border-neutral-800 pt-2 space-y-2">
+              <div className="mt-2 border-t border-neutral-800 pt-3 space-y-3">
                 <span className="text-neutral-400">
                   Tip for {data?.course_name ?? "the course"}
                 </span>
@@ -649,14 +657,14 @@ export default function TeeTimeOrderPage() {
                       key={pct}
                       type="button"
                       onClick={() => setTipMode(pct)}
-                      className={`flex-1 rounded-lg border px-2 py-2 text-base font-medium ${
+                      className={`flex-1 rounded-lg border px-2 py-3 font-medium ${
                         tipMode === pct
                           ? "border-green-500 bg-green-500/10 text-green-400"
                           : "border-neutral-800 text-neutral-300"
                       }`}
                     >
-                      <div>{pct}%</div>
-                      <div className="text-sm opacity-75">
+                      <div className="text-xl font-bold">{pct}%</div>
+                      <div className="text-base opacity-75">
                         ${((Math.round((totalCents * pct) / 100)) / 100).toFixed(2)}
                       </div>
                     </button>
@@ -664,7 +672,7 @@ export default function TeeTimeOrderPage() {
                   <button
                     type="button"
                     onClick={() => setTipMode("custom")}
-                    className={`flex-1 rounded-lg border px-2 py-2 text-base font-medium ${
+                    className={`flex-1 rounded-lg border px-2 py-3 text-lg font-medium ${
                       tipMode === "custom"
                         ? "border-green-500 bg-green-500/10 text-green-400"
                         : "border-neutral-800 text-neutral-300"
@@ -674,7 +682,7 @@ export default function TeeTimeOrderPage() {
                   </button>
                 </div>
                 {tipMode === "custom" && (
-                  <div className="flex items-center gap-1 rounded-lg border border-neutral-800 px-3 py-2">
+                  <div className="flex items-center gap-1 rounded-lg border border-neutral-800 px-3 py-3">
                     <span className="text-neutral-500">$</span>
                     <input
                       type="number"
@@ -695,20 +703,28 @@ export default function TeeTimeOrderPage() {
                       setTipMode("none");
                       setCustomTipDollars("");
                     }}
-                    className="text-sm text-neutral-500 underline"
+                    className="text-base text-neutral-500 underline"
                   >
                     Remove tip
                   </button>
                 )}
                 <div className="flex justify-between text-neutral-400">
                   <span>Tip</span>
-                  <span>${(tipCents / 100).toFixed(2)}</span>
+                  <span className="font-semibold text-white">
+                    ${(tipCents / 100).toFixed(2)}
+                  </span>
                 </div>
               </div>
+            </div>
+          </div>
 
-              <div className="flex justify-between border-t border-neutral-800 pt-1.5 font-bold text-white">
-                <span>Total</span>
-                <span>
+          <div className="border-t border-neutral-800 px-6 py-4">
+            <div className="mx-auto max-w-md">
+              <div className="mb-4 flex items-baseline justify-between">
+                <span className="text-xl font-semibold text-white">
+                  Total
+                </span>
+                <span className="text-4xl font-bold text-white">
                   $
                   {(
                     (totalCents * 1.08 + serviceFeeCents + tipCents) /
@@ -716,15 +732,15 @@ export default function TeeTimeOrderPage() {
                   ).toFixed(2)}
                 </span>
               </div>
-            </div>
 
-            <button
-              onClick={submitOrder}
-              disabled={loading}
-              className="w-full rounded-lg bg-green-500 px-4 py-3 font-semibold text-black disabled:opacity-50"
-            >
-              {loading ? "Submitting..." : "Place order"}
-            </button>
+              <button
+                onClick={submitOrder}
+                disabled={loading}
+                className="w-full rounded-lg bg-green-500 px-4 py-4 text-lg font-semibold text-black disabled:opacity-50"
+              >
+                {loading ? "Submitting..." : "Place order"}
+              </button>
+            </div>
           </div>
         </div>
       )}
