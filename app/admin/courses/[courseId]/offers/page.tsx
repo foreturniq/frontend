@@ -20,8 +20,36 @@ type Offer = {
   is_active: boolean;
   available_from_minutes?: number;
   available_until_minutes?: number;
+  available_from_clock_minutes?: number;
+  available_until_clock_minutes?: number;
   customizations: OfferCustomization[];
 };
+
+// Converts minutes-since-midnight (0-1439) to an <input type="time"> value ("HH:MM").
+function clockMinutesToTimeInput(minutes: number | undefined): string {
+  if (minutes == null) return "";
+  const h = Math.floor(minutes / 60)
+    .toString()
+    .padStart(2, "0");
+  const m = (minutes % 60).toString().padStart(2, "0");
+  return `${h}:${m}`;
+}
+
+// Converts an <input type="time"> value ("HH:MM") back to minutes-since-midnight.
+function timeInputToClockMinutes(value: string): number | null {
+  if (!value) return null;
+  const [h, m] = value.split(":").map(Number);
+  return h * 60 + m;
+}
+
+function clockMinutesToLabel(minutes: number | undefined): string {
+  if (minutes == null) return "";
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  const period = h < 12 ? "AM" : "PM";
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  return `${h12}:${m.toString().padStart(2, "0")} ${period}`;
+}
 
 const FULFILLMENT_OPTIONS = [
   { value: "before_round", label: "Before Round" },
@@ -122,6 +150,8 @@ export default function CourseOffersPage() {
   }
   const [availableFrom, setAvailableFrom] = useState<string>("null");
   const [availableUntil, setAvailableUntil] = useState<string>("null");
+  const [availableFromClock, setAvailableFromClock] = useState("");
+  const [availableUntilClock, setAvailableUntilClock] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
@@ -130,6 +160,20 @@ export default function CourseOffersPage() {
   const [newCustomLabel, setNewCustomLabel] = useState("");
   const [newCustomPrice, setNewCustomPrice] = useState("");
   const [savingCustomization, setSavingCustomization] = useState(false);
+
+  // Edit form state
+  const [editingOfferId, setEditingOfferId] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [editPrice, setEditPrice] = useState("");
+  const [editCategory, setEditCategory] = useState("");
+  const [editFulfillmentType, setEditFulfillmentType] = useState("before_round");
+  const [editAvailableFrom, setEditAvailableFrom] = useState("null");
+  const [editAvailableUntil, setEditAvailableUntil] = useState("null");
+  const [editAvailableFromClock, setEditAvailableFromClock] = useState("");
+  const [editAvailableUntilClock, setEditAvailableUntilClock] = useState("");
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [editError, setEditError] = useState("");
 
   const API = process.env.NEXT_PUBLIC_API_URL;
 
@@ -176,6 +220,13 @@ export default function CourseOffersPage() {
     if (fromMinutes !== null) body.available_from_minutes = fromMinutes;
     if (untilMinutes !== null) body.available_until_minutes = untilMinutes;
 
+    const fromClockMinutes = timeInputToClockMinutes(availableFromClock);
+    const untilClockMinutes = timeInputToClockMinutes(availableUntilClock);
+    if (fromClockMinutes !== null)
+      body.available_from_clock_minutes = fromClockMinutes;
+    if (untilClockMinutes !== null)
+      body.available_until_clock_minutes = untilClockMinutes;
+
     const res = await fetch(`${API}/offers`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -197,6 +248,8 @@ export default function CourseOffersPage() {
     setFulfillmentType("before_round");
     setAvailableFrom("null");
     setAvailableUntil("null");
+    setAvailableFromClock("");
+    setAvailableUntilClock("");
     fetchOffers();
   }
 
@@ -206,6 +259,82 @@ export default function CourseOffersPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ is_active: !offer.is_active }),
     });
+    fetchOffers();
+  }
+
+  function startEdit(offer: Offer) {
+    setEditingOfferId(offer.id);
+    setEditName(offer.name);
+    setEditDescription(offer.description ?? "");
+    setEditPrice((offer.price_cents / 100).toFixed(2));
+    setEditCategory(offer.category);
+    setEditFulfillmentType(offer.fulfillment_type);
+    setEditAvailableFrom(
+      offer.available_from_minutes != null
+        ? String(offer.available_from_minutes)
+        : "null",
+    );
+    setEditAvailableUntil(
+      offer.available_until_minutes != null
+        ? String(offer.available_until_minutes)
+        : "null",
+    );
+    setEditAvailableFromClock(
+      clockMinutesToTimeInput(offer.available_from_clock_minutes),
+    );
+    setEditAvailableUntilClock(
+      clockMinutesToTimeInput(offer.available_until_clock_minutes),
+    );
+    setEditError("");
+    setExpandedOfferId(null);
+  }
+
+  function cancelEdit() {
+    setEditingOfferId(null);
+    setEditError("");
+  }
+
+  async function saveEdit(
+    e: React.SyntheticEvent<HTMLFormElement>,
+    offerId: string,
+  ) {
+    e.preventDefault();
+    setSavingEdit(true);
+    setEditError("");
+
+    const body: Record<string, unknown> = {
+      name: editName,
+      price_cents: Math.round(parseFloat(editPrice) * 100),
+      category: editCategory,
+      fulfillment_type: editFulfillmentType,
+      description: editDescription || null,
+      available_from_minutes:
+        editAvailableFrom === "null" ? null : parseInt(editAvailableFrom),
+      available_until_minutes:
+        editAvailableUntil === "null" ? null : parseInt(editAvailableUntil),
+      available_from_clock_minutes: timeInputToClockMinutes(
+        editAvailableFromClock,
+      ),
+      available_until_clock_minutes: timeInputToClockMinutes(
+        editAvailableUntilClock,
+      ),
+    };
+
+    const res = await fetch(`${API}/offers/${offerId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+
+    const data = await res.json();
+    setSavingEdit(false);
+
+    if (!res.ok) {
+      setEditError(data.error || "Something went wrong");
+      return;
+    }
+
+    setEditingOfferId(null);
     fetchOffers();
   }
 
@@ -290,7 +419,15 @@ export default function CourseOffersPage() {
         <h1 className="mt-1 text-3xl font-bold">
           {courseName || "Loading..."}
         </h1>
-        <p className="mt-1 text-neutral-400">Manage offers</p>
+        <div className="mt-1 flex items-center gap-3">
+          <p className="text-neutral-400">Manage offers</p>
+          <a
+            href={`/admin/courses/${courseId}/settings`}
+            className="text-sm text-green-400 hover:text-green-300"
+          >
+            Hours & timezone settings →
+          </a>
+        </div>
 
         {/* Create form */}
         <section className="mt-8 rounded-2xl border border-neutral-800 bg-neutral-900/60 p-6">
@@ -406,6 +543,40 @@ export default function CourseOffersPage() {
               </div>
             </div>
 
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label className="block text-sm text-neutral-300">
+                  Available from (clock time){" "}
+                  <span className="text-neutral-500">(optional)</span>
+                </label>
+                <input
+                  type="time"
+                  value={availableFromClock}
+                  onChange={(e) => setAvailableFromClock(e.target.value)}
+                  className="mt-2 block w-full rounded-lg border border-neutral-700 bg-neutral-950 px-4 py-2.5 text-base"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm text-neutral-300">
+                  Available until (clock time){" "}
+                  <span className="text-neutral-500">(optional)</span>
+                </label>
+                <input
+                  type="time"
+                  value={availableUntilClock}
+                  onChange={(e) => setAvailableUntilClock(e.target.value)}
+                  className="mt-2 block w-full rounded-lg border border-neutral-700 bg-neutral-950 px-4 py-2.5 text-base"
+                />
+              </div>
+            </div>
+            <p className="text-xs text-neutral-500">
+              E.g. set &quot;Available until&quot; to 11:00 AM to stop showing
+              breakfast items after that time, in the course&apos;s local
+              timezone. Independent of the relative windows above — an
+              offer must satisfy both if both are set.
+            </p>
+
             {error && (
               <p className="rounded-lg border border-red-800 bg-red-900/30 px-4 py-3 text-sm text-red-300">
                 {error}
@@ -488,10 +659,38 @@ export default function CourseOffersPage() {
                                   </span>
                                 </>
                               )}
+                              {offer.available_from_clock_minutes != null && (
+                                <>
+                                  <span>·</span>
+                                  <span>
+                                    from clock{" "}
+                                    {clockMinutesToLabel(
+                                      offer.available_from_clock_minutes,
+                                    )}
+                                  </span>
+                                </>
+                              )}
+                              {offer.available_until_clock_minutes != null && (
+                                <>
+                                  <span>·</span>
+                                  <span>
+                                    until clock{" "}
+                                    {clockMinutesToLabel(
+                                      offer.available_until_clock_minutes,
+                                    )}
+                                  </span>
+                                </>
+                              )}
                             </div>
                           </div>
 
                           <div className="flex shrink-0 gap-2">
+                            <button
+                              onClick={() => startEdit(offer)}
+                              className="rounded-lg bg-neutral-800 px-3 py-1.5 text-xs font-semibold text-neutral-300 hover:bg-neutral-700"
+                            >
+                              Edit
+                            </button>
                             <button
                               onClick={() => toggleCustomizationPanel(offer.id)}
                               className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${
@@ -519,6 +718,199 @@ export default function CourseOffersPage() {
                             </button>
                           </div>
                         </div>
+
+                        {/* Edit panel */}
+                        {editingOfferId === offer.id && (
+                          <form
+                            onSubmit={(e) => saveEdit(e, offer.id)}
+                            className="space-y-4 border-t border-neutral-800 px-4 pb-4 pt-4"
+                          >
+                            <div className="grid gap-4 sm:grid-cols-2">
+                              <div>
+                                <label className="block text-sm text-neutral-300">
+                                  Name
+                                </label>
+                                <input
+                                  value={editName}
+                                  onChange={(e) => setEditName(e.target.value)}
+                                  required
+                                  className="mt-2 block w-full rounded-lg border border-neutral-700 bg-neutral-950 px-4 py-2.5 text-base"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-sm text-neutral-300">
+                                  Price ($)
+                                </label>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  step="0.01"
+                                  value={editPrice}
+                                  onChange={(e) => setEditPrice(e.target.value)}
+                                  required
+                                  className="mt-2 block w-full rounded-lg border border-neutral-700 bg-neutral-950 px-4 py-2.5 text-base"
+                                />
+                              </div>
+                            </div>
+
+                            <div>
+                              <label className="block text-sm text-neutral-300">
+                                Description{" "}
+                                <span className="text-neutral-500">
+                                  (optional)
+                                </span>
+                              </label>
+                              <input
+                                value={editDescription}
+                                onChange={(e) =>
+                                  setEditDescription(e.target.value)
+                                }
+                                className="mt-2 block w-full rounded-lg border border-neutral-700 bg-neutral-950 px-4 py-2.5 text-base"
+                              />
+                            </div>
+
+                            <div className="grid gap-4 sm:grid-cols-2">
+                              <div>
+                                <label className="block text-sm text-neutral-300">
+                                  Category
+                                </label>
+                                <input
+                                  value={editCategory}
+                                  onChange={(e) =>
+                                    setEditCategory(e.target.value)
+                                  }
+                                  required
+                                  className="mt-2 block w-full rounded-lg border border-neutral-700 bg-neutral-950 px-4 py-2.5 text-base"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-sm text-neutral-300">
+                                  Fulfillment
+                                </label>
+                                <select
+                                  value={editFulfillmentType}
+                                  onChange={(e) =>
+                                    setEditFulfillmentType(e.target.value)
+                                  }
+                                  className="mt-2 block w-full rounded-lg border border-neutral-700 bg-neutral-950 px-4 py-2.5 text-base"
+                                >
+                                  {FULFILLMENT_OPTIONS.map((o) => (
+                                    <option key={o.value} value={o.value}>
+                                      {o.label}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+                            </div>
+
+                            <div className="grid gap-4 sm:grid-cols-2">
+                              <div>
+                                <label className="block text-sm text-neutral-300">
+                                  Available from
+                                </label>
+                                <select
+                                  value={editAvailableFrom}
+                                  onChange={(e) =>
+                                    setEditAvailableFrom(e.target.value)
+                                  }
+                                  className="mt-2 block w-full rounded-lg border border-neutral-700 bg-neutral-950 px-4 py-2.5 text-base"
+                                >
+                                  {AVAILABILITY_OPTIONS[
+                                    editFulfillmentType
+                                  ]?.from.map((o) => (
+                                    <option
+                                      key={String(o.minutes)}
+                                      value={String(o.minutes)}
+                                    >
+                                      {o.label}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+                              <div>
+                                <label className="block text-sm text-neutral-300">
+                                  Available until
+                                </label>
+                                <select
+                                  value={editAvailableUntil}
+                                  onChange={(e) =>
+                                    setEditAvailableUntil(e.target.value)
+                                  }
+                                  className="mt-2 block w-full rounded-lg border border-neutral-700 bg-neutral-950 px-4 py-2.5 text-base"
+                                >
+                                  {AVAILABILITY_OPTIONS[
+                                    editFulfillmentType
+                                  ]?.until.map((o) => (
+                                    <option
+                                      key={String(o.minutes)}
+                                      value={String(o.minutes)}
+                                    >
+                                      {o.label}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+                            </div>
+
+                            <div className="grid gap-4 sm:grid-cols-2">
+                              <div>
+                                <label className="block text-sm text-neutral-300">
+                                  Available from (clock time){" "}
+                                  <span className="text-neutral-500">
+                                    (optional)
+                                  </span>
+                                </label>
+                                <input
+                                  type="time"
+                                  value={editAvailableFromClock}
+                                  onChange={(e) =>
+                                    setEditAvailableFromClock(e.target.value)
+                                  }
+                                  className="mt-2 block w-full rounded-lg border border-neutral-700 bg-neutral-950 px-4 py-2.5 text-base"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-sm text-neutral-300">
+                                  Available until (clock time){" "}
+                                  <span className="text-neutral-500">
+                                    (optional)
+                                  </span>
+                                </label>
+                                <input
+                                  type="time"
+                                  value={editAvailableUntilClock}
+                                  onChange={(e) =>
+                                    setEditAvailableUntilClock(e.target.value)
+                                  }
+                                  className="mt-2 block w-full rounded-lg border border-neutral-700 bg-neutral-950 px-4 py-2.5 text-base"
+                                />
+                              </div>
+                            </div>
+
+                            {editError && (
+                              <p className="rounded-lg border border-red-800 bg-red-900/30 px-4 py-3 text-sm text-red-300">
+                                {editError}
+                              </p>
+                            )}
+
+                            <div className="flex gap-2">
+                              <button
+                                type="submit"
+                                disabled={savingEdit}
+                                className="rounded-lg bg-green-500 px-5 py-2.5 font-semibold text-black disabled:opacity-50"
+                              >
+                                {savingEdit ? "Saving..." : "Save changes"}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={cancelEdit}
+                                className="rounded-lg bg-neutral-800 px-5 py-2.5 font-semibold text-neutral-300 hover:bg-neutral-700"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </form>
+                        )}
 
                         {/* Customization panel */}
                         {expandedOfferId === offer.id && (
