@@ -507,75 +507,95 @@ export default function CourseOffersPage() {
               </div>
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <label className="block text-sm text-neutral-300">
-                  Available from
-                </label>
-                <select
-                  value={availableFrom}
-                  onChange={(e) => setAvailableFrom(e.target.value)}
-                  className="mt-2 block w-full rounded-lg border border-neutral-700 bg-neutral-950 px-4 py-2.5 text-base"
-                >
-                  {AVAILABILITY_OPTIONS[fulfillmentType].from.map((o) => (
-                    <option key={String(o.minutes)} value={String(o.minutes)}>
-                      {o.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
+            <div>
+              <p className="text-sm font-medium text-neutral-300">
+                Round timing{" "}
+                <span className="font-normal text-neutral-500">
+                  (relative to tee time)
+                </span>
+              </p>
+              <div className="mt-2 grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="block text-sm text-neutral-300">
+                    Starts
+                  </label>
+                  <select
+                    value={availableFrom}
+                    onChange={(e) => setAvailableFrom(e.target.value)}
+                    className="mt-2 block w-full rounded-lg border border-neutral-700 bg-neutral-950 px-4 py-2.5 text-base"
+                  >
+                    {AVAILABILITY_OPTIONS[fulfillmentType].from.map((o) => (
+                      <option
+                        key={String(o.minutes)}
+                        value={String(o.minutes)}
+                      >
+                        {o.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-              <div>
-                <label className="block text-sm text-neutral-300">
-                  Available until
-                </label>
-                <select
-                  value={availableUntil}
-                  onChange={(e) => setAvailableUntil(e.target.value)}
-                  className="mt-2 block w-full rounded-lg border border-neutral-700 bg-neutral-950 px-4 py-2.5 text-base"
-                >
-                  {AVAILABILITY_OPTIONS[fulfillmentType].until.map((o) => (
-                    <option key={String(o.minutes)} value={String(o.minutes)}>
-                      {o.label}
-                    </option>
-                  ))}
-                </select>
+                <div>
+                  <label className="block text-sm text-neutral-300">
+                    Ends
+                  </label>
+                  <select
+                    value={availableUntil}
+                    onChange={(e) => setAvailableUntil(e.target.value)}
+                    className="mt-2 block w-full rounded-lg border border-neutral-700 bg-neutral-950 px-4 py-2.5 text-base"
+                  >
+                    {AVAILABILITY_OPTIONS[fulfillmentType].until.map((o) => (
+                      <option
+                        key={String(o.minutes)}
+                        value={String(o.minutes)}
+                      >
+                        {o.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <label className="block text-sm text-neutral-300">
-                  Available from (clock time){" "}
-                  <span className="text-neutral-500">(optional)</span>
-                </label>
-                <input
-                  type="time"
-                  value={availableFromClock}
-                  onChange={(e) => setAvailableFromClock(e.target.value)}
-                  className="mt-2 block w-full rounded-lg border border-neutral-700 bg-neutral-950 px-4 py-2.5 text-base"
-                />
-              </div>
+            <div>
+              <p className="text-sm font-medium text-neutral-300">
+                Daily cutoff{" "}
+                <span className="font-normal text-neutral-500">
+                  (clock time, optional)
+                </span>
+              </p>
+              <div className="mt-2 grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="block text-sm text-neutral-300">
+                    Opens at
+                  </label>
+                  <input
+                    type="time"
+                    value={availableFromClock}
+                    onChange={(e) => setAvailableFromClock(e.target.value)}
+                    className="mt-2 block w-full rounded-lg border border-neutral-700 bg-neutral-950 px-4 py-2.5 text-base"
+                  />
+                </div>
 
-              <div>
-                <label className="block text-sm text-neutral-300">
-                  Available until (clock time){" "}
-                  <span className="text-neutral-500">(optional)</span>
-                </label>
-                <input
-                  type="time"
-                  value={availableUntilClock}
-                  onChange={(e) => setAvailableUntilClock(e.target.value)}
-                  className="mt-2 block w-full rounded-lg border border-neutral-700 bg-neutral-950 px-4 py-2.5 text-base"
-                />
+                <div>
+                  <label className="block text-sm text-neutral-300">
+                    Closes at
+                  </label>
+                  <input
+                    type="time"
+                    value={availableUntilClock}
+                    onChange={(e) => setAvailableUntilClock(e.target.value)}
+                    className="mt-2 block w-full rounded-lg border border-neutral-700 bg-neutral-950 px-4 py-2.5 text-base"
+                  />
+                </div>
               </div>
+              <p className="mt-2 text-xs text-neutral-500">
+                E.g. set &quot;Closes at&quot; to 11:00 AM to stop showing
+                breakfast items after that time, in the course&apos;s local
+                timezone. Independent of Round timing above — an offer must
+                satisfy both if both are set.
+              </p>
             </div>
-            <p className="text-xs text-neutral-500">
-              E.g. set &quot;Available until&quot; to 11:00 AM to stop showing
-              breakfast items after that time, in the course&apos;s local
-              timezone. Independent of the relative windows above — an
-              offer must satisfy both if both are set.
-            </p>
 
             {error && (
               <p className="rounded-lg border border-red-800 bg-red-900/30 px-4 py-3 text-sm text-red-300">
@@ -639,7 +659,7 @@ export default function CourseOffersPage() {
                                 <>
                                   <span>·</span>
                                   <span>
-                                    from{" "}
+                                    round starts{" "}
                                     {minutesToLabel(
                                       offer.available_from_minutes,
                                       allWindowOptions(),
@@ -651,7 +671,7 @@ export default function CourseOffersPage() {
                                 <>
                                   <span>·</span>
                                   <span>
-                                    until{" "}
+                                    round ends{" "}
                                     {minutesToLabel(
                                       offer.available_until_minutes,
                                       allWindowOptions(),
@@ -663,7 +683,7 @@ export default function CourseOffersPage() {
                                 <>
                                   <span>·</span>
                                   <span>
-                                    from clock{" "}
+                                    opens at{" "}
                                     {clockMinutesToLabel(
                                       offer.available_from_clock_minutes,
                                     )}
@@ -674,7 +694,7 @@ export default function CourseOffersPage() {
                                 <>
                                   <span>·</span>
                                   <span>
-                                    until clock{" "}
+                                    closes at{" "}
                                     {clockMinutesToLabel(
                                       offer.available_until_clock_minutes,
                                     )}
@@ -803,87 +823,99 @@ export default function CourseOffersPage() {
                               </div>
                             </div>
 
-                            <div className="grid gap-4 sm:grid-cols-2">
-                              <div>
-                                <label className="block text-sm text-neutral-300">
-                                  Available from
-                                </label>
-                                <select
-                                  value={editAvailableFrom}
-                                  onChange={(e) =>
-                                    setEditAvailableFrom(e.target.value)
-                                  }
-                                  className="mt-2 block w-full rounded-lg border border-neutral-700 bg-neutral-950 px-4 py-2.5 text-base"
-                                >
-                                  {AVAILABILITY_OPTIONS[
-                                    editFulfillmentType
-                                  ]?.from.map((o) => (
-                                    <option
-                                      key={String(o.minutes)}
-                                      value={String(o.minutes)}
-                                    >
-                                      {o.label}
-                                    </option>
-                                  ))}
-                                </select>
-                              </div>
-                              <div>
-                                <label className="block text-sm text-neutral-300">
-                                  Available until
-                                </label>
-                                <select
-                                  value={editAvailableUntil}
-                                  onChange={(e) =>
-                                    setEditAvailableUntil(e.target.value)
-                                  }
-                                  className="mt-2 block w-full rounded-lg border border-neutral-700 bg-neutral-950 px-4 py-2.5 text-base"
-                                >
-                                  {AVAILABILITY_OPTIONS[
-                                    editFulfillmentType
-                                  ]?.until.map((o) => (
-                                    <option
-                                      key={String(o.minutes)}
-                                      value={String(o.minutes)}
-                                    >
-                                      {o.label}
-                                    </option>
-                                  ))}
-                                </select>
+                            <div>
+                              <p className="text-sm font-medium text-neutral-300">
+                                Round timing{" "}
+                                <span className="font-normal text-neutral-500">
+                                  (relative to tee time)
+                                </span>
+                              </p>
+                              <div className="mt-2 grid gap-4 sm:grid-cols-2">
+                                <div>
+                                  <label className="block text-sm text-neutral-300">
+                                    Starts
+                                  </label>
+                                  <select
+                                    value={editAvailableFrom}
+                                    onChange={(e) =>
+                                      setEditAvailableFrom(e.target.value)
+                                    }
+                                    className="mt-2 block w-full rounded-lg border border-neutral-700 bg-neutral-950 px-4 py-2.5 text-base"
+                                  >
+                                    {AVAILABILITY_OPTIONS[
+                                      editFulfillmentType
+                                    ]?.from.map((o) => (
+                                      <option
+                                        key={String(o.minutes)}
+                                        value={String(o.minutes)}
+                                      >
+                                        {o.label}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </div>
+                                <div>
+                                  <label className="block text-sm text-neutral-300">
+                                    Ends
+                                  </label>
+                                  <select
+                                    value={editAvailableUntil}
+                                    onChange={(e) =>
+                                      setEditAvailableUntil(e.target.value)
+                                    }
+                                    className="mt-2 block w-full rounded-lg border border-neutral-700 bg-neutral-950 px-4 py-2.5 text-base"
+                                  >
+                                    {AVAILABILITY_OPTIONS[
+                                      editFulfillmentType
+                                    ]?.until.map((o) => (
+                                      <option
+                                        key={String(o.minutes)}
+                                        value={String(o.minutes)}
+                                      >
+                                        {o.label}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </div>
                               </div>
                             </div>
 
-                            <div className="grid gap-4 sm:grid-cols-2">
-                              <div>
-                                <label className="block text-sm text-neutral-300">
-                                  Available from (clock time){" "}
-                                  <span className="text-neutral-500">
-                                    (optional)
-                                  </span>
-                                </label>
-                                <input
-                                  type="time"
-                                  value={editAvailableFromClock}
-                                  onChange={(e) =>
-                                    setEditAvailableFromClock(e.target.value)
-                                  }
-                                  className="mt-2 block w-full rounded-lg border border-neutral-700 bg-neutral-950 px-4 py-2.5 text-base"
-                                />
-                              </div>
-                              <div>
-                                <label className="block text-sm text-neutral-300">
-                                  Available until (clock time){" "}
-                                  <span className="text-neutral-500">
-                                    (optional)
-                                  </span>
-                                </label>
-                                <input
-                                  type="time"
-                                  value={editAvailableUntilClock}
-                                  onChange={(e) =>
-                                    setEditAvailableUntilClock(e.target.value)
-                                  }
-                                  className="mt-2 block w-full rounded-lg border border-neutral-700 bg-neutral-950 px-4 py-2.5 text-base"
-                                />
+                            <div>
+                              <p className="text-sm font-medium text-neutral-300">
+                                Daily cutoff{" "}
+                                <span className="font-normal text-neutral-500">
+                                  (clock time, optional)
+                                </span>
+                              </p>
+                              <div className="mt-2 grid gap-4 sm:grid-cols-2">
+                                <div>
+                                  <label className="block text-sm text-neutral-300">
+                                    Opens at
+                                  </label>
+                                  <input
+                                    type="time"
+                                    value={editAvailableFromClock}
+                                    onChange={(e) =>
+                                      setEditAvailableFromClock(e.target.value)
+                                    }
+                                    className="mt-2 block w-full rounded-lg border border-neutral-700 bg-neutral-950 px-4 py-2.5 text-base"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-sm text-neutral-300">
+                                    Closes at
+                                  </label>
+                                  <input
+                                    type="time"
+                                    value={editAvailableUntilClock}
+                                    onChange={(e) =>
+                                      setEditAvailableUntilClock(
+                                        e.target.value,
+                                      )
+                                    }
+                                    className="mt-2 block w-full rounded-lg border border-neutral-700 bg-neutral-950 px-4 py-2.5 text-base"
+                                  />
+                                </div>
                               </div>
                             </div>
 
