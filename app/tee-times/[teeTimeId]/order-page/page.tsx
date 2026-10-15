@@ -96,6 +96,7 @@ export default function TeeTimeOrderPage() {
 
   const [data, setData] = useState<OrderPage | null>(null);
   const [orderType, setOrderType] = useState<OrderType>("before_round");
+  const [beforeRoundClosed, setBeforeRoundClosed] = useState(false);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [showReview, setShowReview] = useState(false);
@@ -113,18 +114,19 @@ export default function TeeTimeOrderPage() {
         setData(d);
         const cutoff = new Date(d.starts_at).getTime() - 5 * 60 * 1000;
         if (Date.now() >= cutoff) {
+          setBeforeRoundClosed(true);
           setOrderType("at_turn");
         }
       });
   }, [teeTimeId]);
 
-  const availableOrderTypes = useMemo(() => {
-    if (!data) return ORDER_TYPE_OPTIONS;
-    const cutoff = new Date(data.starts_at).getTime() - 5 * 60 * 1000;
-    return ORDER_TYPE_OPTIONS.filter(
-      (opt) => opt.value !== "before_round" || Date.now() < cutoff,
-    );
-  }, [data]);
+  const availableOrderTypes = useMemo(
+    () =>
+      ORDER_TYPE_OPTIONS.filter(
+        (opt) => opt.value !== "before_round" || !beforeRoundClosed,
+      ),
+    [beforeRoundClosed],
+  );
 
   function offerById(offerId: string): Offer | undefined {
     return data?.offers.find((o) => o.id === offerId);

@@ -22,18 +22,15 @@ export default function AdminPage() {
   const appUrl =
     process.env.NEXT_PUBLIC_APP_URL || "https://api.foreturniq.com";
 
-  const fetchCourses = useCallback(async () => {
-    setLoadingCourses(true);
-    try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/courses`);
-      const data = await res.json();
-      setCourses(data);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoadingCourses(false);
-    }
-  }, []);
+  const fetchCourses = useCallback(
+    () =>
+      fetch(`${process.env.NEXT_PUBLIC_API_URL}/courses`)
+        .then((res) => res.json())
+        .then((data) => setCourses(data))
+        .catch((err) => console.error(err))
+        .finally(() => setLoadingCourses(false)),
+    [],
+  );
 
   useEffect(() => {
     fetchCourses();

@@ -2,19 +2,13 @@
 
 import { QRCodeCanvas } from "qrcode.react";
 import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
 
 export default function CourseQRPage() {
   const params = useParams();
   const courseId = params.courseId as string;
 
-  const [orderUrl, setOrderUrl] = useState("");
-
-  useEffect(() => {
-    const base =
-      process.env.NEXT_PUBLIC_APP_URL || "https://app.foreturniq.com";
-    setOrderUrl(`${base}/courses/${courseId}/order`);
-  }, [courseId]);
+  const base = process.env.NEXT_PUBLIC_APP_URL || "https://app.foreturniq.com";
+  const orderUrl = `${base}/courses/${courseId}/order`;
 
   return (
     <main className="min-h-screen bg-white px-6 py-10 text-black">

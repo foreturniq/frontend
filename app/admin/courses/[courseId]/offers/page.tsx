@@ -177,23 +177,20 @@ export default function CourseOffersPage() {
 
   const API = process.env.NEXT_PUBLIC_API_URL;
 
-  const fetchOffers = useCallback(async () => {
-    setLoading(true);
-    try {
-      const [courseRes, offersRes] = await Promise.all([
-        fetch(`${API}/courses/${courseId}`),
-        fetch(`${API}/courses/${courseId}/offers`),
-      ]);
-      const courseData = await courseRes.json();
-      const offersData = await offersRes.json();
-      setCourseName(courseData.name);
-      setOffers(offersData);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  }, [courseId, API]);
+  const fetchOffers = useCallback(
+    () =>
+      Promise.all([
+        fetch(`${API}/courses/${courseId}`).then((res) => res.json()),
+        fetch(`${API}/courses/${courseId}/offers`).then((res) => res.json()),
+      ])
+        .then(([courseData, offersData]) => {
+          setCourseName(courseData.name);
+          setOffers(offersData);
+        })
+        .catch((err) => console.error(err))
+        .finally(() => setLoading(false)),
+    [courseId, API],
+  );
 
   useEffect(() => {
     fetchOffers();
