@@ -73,33 +73,31 @@ export default function CourseSettingsPage() {
 
   const API = process.env.NEXT_PUBLIC_API_URL;
 
-  const fetchCourse = useCallback(async () => {
-    setLoading(true);
-    try {
-      const [courseRes, hoursRes] = await Promise.all([
-        fetch(`${API}/courses/${courseId}`),
-        fetch(`${API}/courses/${courseId}/hours`),
-      ]);
-      const courseData = await courseRes.json();
-      const hoursData: CourseHourEntry[] = await hoursRes.json();
+  const fetchCourse = useCallback(
+    () =>
+      Promise.all([
+        fetch(`${API}/courses/${courseId}`).then((res) => res.json()),
+        fetch(`${API}/courses/${courseId}/hours`).then(
+          (res) => res.json() as Promise<CourseHourEntry[]>,
+        ),
+      ])
+        .then(([courseData, hoursData]) => {
+          setCourseName(courseData.name);
+          setTimezone(courseData.timezone || "America/Denver");
 
-      setCourseName(courseData.name);
-      setTimezone(courseData.timezone || "America/Denver");
-
-      const next = emptyWeek();
-      for (const entry of hoursData) {
-        next[entry.day_of_week] = {
-          open: minutesToTimeInput(entry.open_time_minutes),
-          close: minutesToTimeInput(entry.close_time_minutes),
-        };
-      }
-      setWeek(next);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  }, [courseId, API]);
+          const next = emptyWeek();
+          for (const entry of hoursData) {
+            next[entry.day_of_week] = {
+              open: minutesToTimeInput(entry.open_time_minutes),
+              close: minutesToTimeInput(entry.close_time_minutes),
+            };
+          }
+          setWeek(next);
+        })
+        .catch((err) => console.error(err))
+        .finally(() => setLoading(false)),
+    [courseId, API],
+  );
 
   useEffect(() => {
     fetchCourse();

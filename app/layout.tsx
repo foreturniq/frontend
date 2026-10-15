@@ -27,7 +27,14 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        {process.env.NEXT_PUBLIC_APP_ENV === "staging" && (
+          <div className="bg-amber-400 py-1 text-center text-xs font-semibold tracking-wide text-black">
+            STAGING: Stripe test mode, not real orders
+          </div>
+        )}
+        {children}
+      </body>
     </html>
   );
 }
