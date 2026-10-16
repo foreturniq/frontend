@@ -2,6 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
+import { useAuth } from "@clerk/nextjs";
+import OperatorBar from "@/app/components/OperatorBar";
+import { useApiFetch, useIsManager } from "@/lib/useApiFetch";
 
 type OrderItemCustomization = {
   id: string;
@@ -128,6 +131,9 @@ export default function CourseOrdersPage() {
   const params = useParams();
   const courseId = params.courseId as string;
   const [courseName, setCourseName] = useState<string>("");
+  const apiFetch = useApiFetch();
+  const { getToken } = useAuth();
+  const isManager = useIsManager();
 
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
@@ -140,11 +146,11 @@ export default function CourseOrdersPage() {
 
   // Load course name
   useEffect(() => {
-    fetch(`${process.env.NEXT_PUBLIC_API_URL}/courses/${courseId}`)
+    apiFetch(`/courses/${courseId}`)
       .then((r) => r.json())
       .then((d) => setCourseName(d.name))
       .catch(console.error);
-  }, [courseId]);
+  }, [courseId, apiFetch]);
 
   // SSE with polling fallback.
   // Corporate proxies can accept the SSE connection but silently buffer data,
@@ -155,13 +161,17 @@ export default function CourseOrdersPage() {
     const API = process.env.NEXT_PUBLIC_API_URL;
     let pollInterval: ReturnType<typeof setInterval> | null = null;
     let sseMessageTimeout: ReturnType<typeof setTimeout> | null = null;
+    let reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
+    let es: EventSource | null = null;
+    let closed = false;
 
     async function poll() {
       try {
-        const res = await fetch(
-          `${API}/courses/${courseId}/orders?t=${Date.now()}`,
+        const res = await apiFetch(
+          `/courses/${courseId}/orders?t=${Date.now()}`,
           { cache: "no-store" },
         );
+        if (!res.ok) return;
         const data = await res.json();
         setOrders(data);
         setLoading(false);
@@ -191,44 +201,58 @@ export default function CourseOrdersPage() {
       }
     };
 
-    // Load immediately — don't wait for SSE handshake
-    poll();
+    // EventSource can't set headers, so the token goes in the query string.
+    // Tokens expire in about a minute, so every (re)connect gets a fresh one
+    // instead of letting the browser retry with the stale URL.
+    async function connect() {
+      const token = await getToken();
+      if (closed) return;
+      es = new EventSource(
+        `${API}/courses/${courseId}/orders/stream?clerk_token=${encodeURIComponent(token ?? "")}`,
+      );
 
-    const es = new EventSource(`${API}/courses/${courseId}/orders/stream`);
+      es.onopen = () => {
+        // If no message arrives within 5s the proxy is buffering; fall back to polling
+        sseMessageTimeout = setTimeout(() => {
+          setConnected(false);
+          startPolling();
+        }, 5000);
+      };
 
-    es.onopen = () => {
-      // If no message arrives within 5s the proxy is buffering; fall back to polling
-      sseMessageTimeout = setTimeout(() => {
+      es.onmessage = (e) => {
+        clearSseTimeout();
+        setConnected(true);
+        stopPolling();
+        setOrders(JSON.parse(e.data));
+        setLoading(false);
+        setLastRefreshedAt(new Date().toLocaleTimeString());
+      };
+
+      es.onerror = () => {
+        clearSseTimeout();
         setConnected(false);
         startPolling();
-      }, 5000);
-    };
+        es?.close();
+        reconnectTimeout = setTimeout(connect, 15000);
+      };
+    }
 
-    es.onmessage = (e) => {
-      clearSseTimeout();
-      setConnected(true);
-      stopPolling();
-      setOrders(JSON.parse(e.data));
-      setLoading(false);
-      setLastRefreshedAt(new Date().toLocaleTimeString());
-    };
-
-    es.onerror = () => {
-      clearSseTimeout();
-      setConnected(false);
-      startPolling();
-    };
+    // Load immediately — don't wait for SSE handshake
+    poll();
+    connect();
 
     return () => {
-      es.close();
+      closed = true;
+      es?.close();
       stopPolling();
       clearSseTimeout();
+      if (reconnectTimeout) clearTimeout(reconnectTimeout);
     };
-  }, [courseId]);
+  }, [courseId, apiFetch, getToken]);
 
   async function updateStatus(orderId: string, status: string) {
-    const res = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/orders/${orderId}/status`,
+    const res = await apiFetch(
+      `/orders/${orderId}/status`,
       {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -284,10 +308,15 @@ export default function CourseOrdersPage() {
     )
     .reduce((sum, o) => sum + o.total_cents, 0);
 
+  // Staff can only fulfill; refunds and cancels are manager-only.
   const paidActions = [
     { label: "Fulfill", status: "fulfilled" },
-    { label: "Refund", status: "refunded" },
-    { label: "Cancel", status: "canceled" },
+    ...(isManager
+      ? [
+          { label: "Refund", status: "refunded" },
+          { label: "Cancel", status: "canceled" },
+        ]
+      : []),
   ];
 
   if (loading) {
@@ -303,7 +332,10 @@ export default function CourseOrdersPage() {
       <div className="mx-auto max-w-6xl">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="text-sm font-medium text-green-400">Foreturn IQ</p>
+            <div className="flex items-center justify-between gap-4">
+              <p className="text-sm font-medium text-green-400">Foreturn IQ</p>
+              <OperatorBar />
+            </div>
             <h1 className="mt-2 text-3xl font-bold">{courseName}</h1>
             <h2 className="mt-3 text-2xl font-bold">Order Queue</h2>
             <p className="mt-2 text-neutral-400">
@@ -423,7 +455,7 @@ export default function CourseOrdersPage() {
             title="Fulfilled"
             orders={fulfilled}
             emptyText="No fulfilled orders yet."
-            actions={[{ label: "Refund", status: "refunded" }]}
+            actions={isManager ? [{ label: "Refund", status: "refunded" }] : []}
             onUpdateStatus={updateStatus}
           />
 
