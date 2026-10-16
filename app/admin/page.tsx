@@ -1,20 +1,25 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import OperatorBar from "@/app/components/OperatorBar";
+import { useApiFetch } from "@/lib/useApiFetch";
 
 type Course = {
   id: string;
   name: string;
   stripe_account_id: string;
+  clerk_org_id: string;
   created_at: string;
 };
 
 export default function AdminPage() {
+  const apiFetch = useApiFetch();
   const [courses, setCourses] = useState<Course[]>([]);
   const [loadingCourses, setLoadingCourses] = useState(true);
 
   const [name, setName] = useState("");
   const [stripeAccountId, setStripeAccountId] = useState("");
+  const [clerkOrgId, setClerkOrgId] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [successId, setSuccessId] = useState("");
@@ -24,12 +29,12 @@ export default function AdminPage() {
 
   const fetchCourses = useCallback(
     () =>
-      fetch(`${process.env.NEXT_PUBLIC_API_URL}/courses`)
-        .then((res) => res.json())
+      apiFetch("/admin/courses")
+        .then((res) => (res.ok ? res.json() : []))
         .then((data) => setCourses(data))
         .catch((err) => console.error(err))
         .finally(() => setLoadingCourses(false)),
-    [],
+    [apiFetch],
   );
 
   useEffect(() => {
@@ -42,10 +47,14 @@ export default function AdminPage() {
     setError("");
     setSuccessId("");
 
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/courses`, {
+    const res = await apiFetch("/admin/courses", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, stripe_account_id: stripeAccountId }),
+      body: JSON.stringify({
+        name,
+        stripe_account_id: stripeAccountId,
+        clerk_org_id: clerkOrgId,
+      }),
     });
 
     const data = await res.json();
@@ -59,14 +68,20 @@ export default function AdminPage() {
     setSuccessId(data.id);
     setName("");
     setStripeAccountId("");
+    setClerkOrgId("");
     fetchCourses();
   }
 
   return (
     <main className="min-h-screen bg-neutral-950 text-white px-6 py-10">
       <div className="mx-auto max-w-3xl">
-        <p className="text-sm font-medium text-green-400">Foreturn IQ — Admin</p>
-        <h1 className="mt-2 text-3xl font-bold">Courses</h1>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-sm font-medium text-green-400">Foreturn IQ — Admin</p>
+            <h1 className="mt-2 text-3xl font-bold">Courses</h1>
+          </div>
+          <OperatorBar />
+        </div>
 
         {/* Create form */}
         <section className="mt-8 rounded-2xl border border-neutral-800 bg-neutral-900/60 p-6">
@@ -81,6 +96,23 @@ export default function AdminPage() {
                 required
                 placeholder="Pebble Beach Golf Links"
                 className="mt-2 block w-full rounded-lg border border-neutral-700 bg-neutral-950 px-4 py-3 text-base"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm text-neutral-300">
+                Clerk organization ID
+              </label>
+              <p className="mt-1 text-xs text-neutral-500">
+                Clerk Dashboard → Organizations → the course&apos;s org. Starts with{" "}
+                <span className="font-mono">org_</span>
+              </p>
+              <input
+                value={clerkOrgId}
+                onChange={(e) => setClerkOrgId(e.target.value)}
+                required
+                placeholder="org_..."
+                className="mt-2 block w-full rounded-lg border border-neutral-700 bg-neutral-950 px-4 py-3 font-mono text-base"
               />
             </div>
 
@@ -105,7 +137,6 @@ export default function AdminPage() {
                 {error}
               </p>
             )}
-
             {successId && (
               <p className="rounded-lg border border-green-800 bg-green-900/30 px-4 py-3 text-sm text-green-300">
                 Course created — see below for links.
@@ -158,13 +189,15 @@ function CourseCard({
   highlight: boolean;
 }) {
   const links = [
-    { label: "Dashboard", url: `${appUrl}/courses/${course.id}/orders` },
     { label: "QR Code", url: `${appUrl}/courses/${course.id}/qr` },
     { label: "Order URL", url: `${appUrl}/courses/${course.id}/order` },
   ];
 
+  // Internal support access: these open with Foreturn IQ staff permissions.
   const adminLinks = [
-    { label: "Manage Offers", url: `/admin/courses/${course.id}/offers` },
+    { label: "Dashboard", url: `/courses/${course.id}/orders` },
+    { label: "Menu", url: `/courses/${course.id}/menu` },
+    { label: "Settings", url: `/courses/${course.id}/settings` },
   ];
 
   return (
@@ -177,6 +210,9 @@ function CourseCard({
         <div>
           <h3 className="font-semibold">{course.name}</h3>
           <p className="mt-0.5 font-mono text-xs text-neutral-500">{course.id}</p>
+          <p className="font-mono text-xs text-neutral-500">
+            {course.clerk_org_id || "no org assigned"}
+          </p>
         </div>
         {course.stripe_account_id && (
           <span className="shrink-0 rounded-full bg-green-900/40 px-2.5 py-1 text-xs text-green-400">

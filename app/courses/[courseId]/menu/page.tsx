@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useParams } from "next/navigation";
+import { useApiFetch } from "@/lib/useApiFetch";
 
 type OfferCustomization = {
   id: string;
@@ -175,13 +176,13 @@ export default function CourseOffersPage() {
   const [savingEdit, setSavingEdit] = useState(false);
   const [editError, setEditError] = useState("");
 
-  const API = process.env.NEXT_PUBLIC_API_URL;
+  const apiFetch = useApiFetch();
 
   const fetchOffers = useCallback(
     () =>
       Promise.all([
-        fetch(`${API}/courses/${courseId}`).then((res) => res.json()),
-        fetch(`${API}/courses/${courseId}/offers`).then((res) => res.json()),
+        apiFetch(`/courses/${courseId}`).then((res) => res.json()),
+        apiFetch(`/courses/${courseId}/offers`).then((res) => res.json()),
       ])
         .then(([courseData, offersData]) => {
           setCourseName(courseData.name);
@@ -189,7 +190,7 @@ export default function CourseOffersPage() {
         })
         .catch((err) => console.error(err))
         .finally(() => setLoading(false)),
-    [courseId, API],
+    [courseId, apiFetch],
   );
 
   useEffect(() => {
@@ -224,7 +225,7 @@ export default function CourseOffersPage() {
     if (untilClockMinutes !== null)
       body.available_until_clock_minutes = untilClockMinutes;
 
-    const res = await fetch(`${API}/offers`, {
+    const res = await apiFetch(`/offers`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
@@ -251,7 +252,7 @@ export default function CourseOffersPage() {
   }
 
   async function toggleActive(offer: Offer) {
-    await fetch(`${API}/offers/${offer.id}`, {
+    await apiFetch(`/offers/${offer.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ is_active: !offer.is_active }),
@@ -317,7 +318,7 @@ export default function CourseOffersPage() {
       ),
     };
 
-    const res = await fetch(`${API}/offers/${offerId}`, {
+    const res = await apiFetch(`/offers/${offerId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
@@ -352,7 +353,7 @@ export default function CourseOffersPage() {
       ? Math.round(parseFloat(newCustomPrice) * 100)
       : 0;
 
-    await fetch(`${API}/offers/${offerId}/customizations`, {
+    await apiFetch(`/offers/${offerId}/customizations`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ label: newCustomLabel, price_cents: priceCents }),
@@ -365,7 +366,7 @@ export default function CourseOffersPage() {
   }
 
   async function deleteCustomization(offerId: string, customizationId: string) {
-    await fetch(`${API}/offers/${offerId}/customizations/${customizationId}`, {
+    await apiFetch(`/offers/${offerId}/customizations/${customizationId}`, {
       method: "DELETE",
     });
     fetchOffers();
@@ -404,22 +405,20 @@ export default function CourseOffersPage() {
     <main className="min-h-screen bg-neutral-950 text-white px-6 py-10">
       <div className="mx-auto max-w-3xl">
         <a
-          href="/admin"
+          href={`/courses/${courseId}/orders`}
           className="text-sm text-neutral-500 hover:text-neutral-300"
         >
-          ← Back to courses
+          ← Back to order queue
         </a>
 
-        <p className="mt-4 text-sm font-medium text-green-400">
-          Foreturn IQ — Admin
-        </p>
+        <p className="mt-4 text-sm font-medium text-green-400">Foreturn IQ</p>
         <h1 className="mt-1 text-3xl font-bold">
           {courseName || "Loading..."}
         </h1>
         <div className="mt-1 flex items-center gap-3">
           <p className="text-neutral-400">Manage offers</p>
           <a
-            href={`/admin/courses/${courseId}/settings`}
+            href={`/courses/${courseId}/settings`}
             className="text-sm text-green-400 hover:text-green-300"
           >
             Hours & timezone settings →

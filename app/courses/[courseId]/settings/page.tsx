@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useParams } from "next/navigation";
+import { useApiFetch } from "@/lib/useApiFetch";
 
 const COMMON_TIMEZONES = [
   "America/New_York",
@@ -71,13 +72,13 @@ export default function CourseSettingsPage() {
     DAY_LABELS.map(() => false),
   );
 
-  const API = process.env.NEXT_PUBLIC_API_URL;
+  const apiFetch = useApiFetch();
 
   const fetchCourse = useCallback(
     () =>
       Promise.all([
-        fetch(`${API}/courses/${courseId}`).then((res) => res.json()),
-        fetch(`${API}/courses/${courseId}/hours`).then(
+        apiFetch(`/courses/${courseId}`).then((res) => res.json()),
+        apiFetch(`/courses/${courseId}/hours`).then(
           (res) => res.json() as Promise<CourseHourEntry[]>,
         ),
       ])
@@ -96,7 +97,7 @@ export default function CourseSettingsPage() {
         })
         .catch((err) => console.error(err))
         .finally(() => setLoading(false)),
-    [courseId, API],
+    [courseId, apiFetch],
   );
 
   useEffect(() => {
@@ -109,7 +110,7 @@ export default function CourseSettingsPage() {
     setError("");
     setSaved(false);
 
-    const res = await fetch(`${API}/courses/${courseId}`, {
+    const res = await apiFetch(`/courses/${courseId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ timezone }),
@@ -165,7 +166,7 @@ export default function CourseSettingsPage() {
       close_time_minutes: timeInputToMinutes(row.close),
     }));
 
-    const res = await fetch(`${API}/courses/${courseId}/hours`, {
+    const res = await apiFetch(`/courses/${courseId}/hours`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(entries),
@@ -186,15 +187,13 @@ export default function CourseSettingsPage() {
     <main className="min-h-screen bg-neutral-950 text-white px-6 py-10">
       <div className="mx-auto max-w-2xl">
         <a
-          href={`/admin/courses/${courseId}/offers`}
+          href={`/courses/${courseId}/menu`}
           className="text-sm text-neutral-500 hover:text-neutral-300"
         >
-          ← Back to offers
+          ← Back to menu
         </a>
 
-        <p className="mt-4 text-sm font-medium text-green-400">
-          Foreturn IQ — Admin
-        </p>
+        <p className="mt-4 text-sm font-medium text-green-400">Foreturn IQ</p>
         <h1 className="mt-1 text-3xl font-bold">
           {courseName || "Loading..."}
         </h1>
