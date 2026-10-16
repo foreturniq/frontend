@@ -227,11 +227,18 @@ export default function CourseOrdersPage() {
   }, [courseId]);
 
   async function updateStatus(orderId: string, status: string) {
-    await fetch(`${process.env.NEXT_PUBLIC_API_URL}/orders/${orderId}/status`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status }),
-    });
+    const res = await fetch(
+      `${process.env.NEXT_PUBLIC_API_URL}/orders/${orderId}/status`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      },
+    );
+    if (!res.ok) {
+      const data = await res.json().catch(() => null);
+      window.alert(data?.error ?? `Could not update order (${res.status}).`);
+    }
   }
 
   const today = new Date().toDateString();
@@ -272,7 +279,7 @@ export default function CourseOrdersPage() {
   const revenueCents = orders
     .filter(
       (o) =>
-        o.status !== "canceled" &&
+        (o.status === "paid" || o.status === "fulfilled") &&
         new Date(o.tee_time_starts_at).toDateString() === today,
     )
     .reduce((sum, o) => sum + o.total_cents, 0);
