@@ -28,17 +28,15 @@ export default function AdminPage() {
   const appUrl =
     process.env.NEXT_PUBLIC_APP_URL || "https://api.foreturniq.com";
 
-  const fetchCourses = useCallback(
-    () =>
-      apiFetch("/courses")
-        .then((res) => res.json())
-        .then((data) => setCourses(data))
-        .catch((err) => console.error(err))
-        .finally(() => setLoadingCourses(false)),
-    // orgId: refetch when the operator switches organizations
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [apiFetch, orgId],
-  );
+  const fetchCourses = useCallback(() => {
+    // No active org while signing out; the API would 401.
+    if (!orgId) return;
+    return apiFetch("/courses")
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data) => setCourses(data))
+      .catch((err) => console.error(err))
+      .finally(() => setLoadingCourses(false));
+  }, [apiFetch, orgId]);
 
   useEffect(() => {
     fetchCourses();

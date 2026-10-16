@@ -13,6 +13,7 @@ export default function OperatorProvider({
       signUpUrl="/sign-up"
       signInFallbackRedirectUrl="/admin"
       signUpFallbackRedirectUrl="/admin"
+      afterSignOutUrl="/sign-in"
     >
       {children}
     </ClerkProvider>
