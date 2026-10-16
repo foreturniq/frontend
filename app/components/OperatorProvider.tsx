@@ -11,8 +11,8 @@ export default function OperatorProvider({
     <ClerkProvider
       signInUrl="/sign-in"
       signUpUrl="/sign-up"
-      signInFallbackRedirectUrl="/admin"
-      signUpFallbackRedirectUrl="/admin"
+      signInFallbackRedirectUrl="/dashboard"
+      signUpFallbackRedirectUrl="/dashboard"
       afterSignOutUrl="/sign-in"
     >
       {children}

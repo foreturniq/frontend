@@ -7,8 +7,8 @@ export default function OperatorBar() {
     <div className="flex items-center gap-3">
       <OrganizationSwitcher
         hidePersonal
-        afterSelectOrganizationUrl="/admin"
-        afterCreateOrganizationUrl="/admin"
+        afterSelectOrganizationUrl="/dashboard"
+        afterCreateOrganizationUrl="/dashboard"
       />
       <UserButton />
     </div>

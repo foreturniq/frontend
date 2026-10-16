@@ -9,6 +9,9 @@ export default clerkMiddleware({ signInUrl: "/sign-in", signUpUrl: "/sign-up" })
 export const config = {
   matcher: [
     "/admin/:path*",
+    "/dashboard/:path*",
+    "/courses/:courseId/menu/:path*",
+    "/courses/:courseId/settings/:path*",
     "/courses/:courseId/orders/:path*",
     "/courses/:courseId/qr/:path*",
     "/sign-in/:path*",

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import { useAuth } from "@clerk/nextjs";
 import OperatorBar from "@/app/components/OperatorBar";
-import { useApiFetch, useIsManager } from "@/lib/useApiFetch";
+import { useApiFetch, useIsInternal, useIsManager } from "@/lib/useApiFetch";
 
 type OrderItemCustomization = {
   id: string;
@@ -134,6 +134,7 @@ export default function CourseOrdersPage() {
   const apiFetch = useApiFetch();
   const { getToken } = useAuth();
   const isManager = useIsManager();
+  const isInternal = useIsInternal();
 
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
@@ -337,6 +338,24 @@ export default function CourseOrdersPage() {
               <OperatorBar />
             </div>
             <h1 className="mt-2 text-3xl font-bold">{courseName}</h1>
+            {isManager && (
+              <div className="mt-2 flex flex-wrap gap-3 text-sm">
+                <a href={`/courses/${courseId}/menu`} className="text-green-400 hover:text-green-300">
+                  Menu
+                </a>
+                <a href={`/courses/${courseId}/settings`} className="text-green-400 hover:text-green-300">
+                  Settings
+                </a>
+                <a href={`/courses/${courseId}/qr`} className="text-green-400 hover:text-green-300">
+                  QR code
+                </a>
+                {isInternal && (
+                  <a href="/admin" className="text-amber-400 hover:text-amber-300">
+                    Foreturn admin
+                  </a>
+                )}
+              </div>
+            )}
             <h2 className="mt-3 text-2xl font-bold">Order Queue</h2>
             <p className="mt-2 text-neutral-400">
               Manage incoming golfer orders for this course.

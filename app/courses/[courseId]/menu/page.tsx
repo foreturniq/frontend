@@ -405,22 +405,20 @@ export default function CourseOffersPage() {
     <main className="min-h-screen bg-neutral-950 text-white px-6 py-10">
       <div className="mx-auto max-w-3xl">
         <a
-          href="/admin"
+          href={`/courses/${courseId}/orders`}
           className="text-sm text-neutral-500 hover:text-neutral-300"
         >
-          ← Back to courses
+          ← Back to order queue
         </a>
 
-        <p className="mt-4 text-sm font-medium text-green-400">
-          Foreturn IQ — Admin
-        </p>
+        <p className="mt-4 text-sm font-medium text-green-400">Foreturn IQ</p>
         <h1 className="mt-1 text-3xl font-bold">
           {courseName || "Loading..."}
         </h1>
         <div className="mt-1 flex items-center gap-3">
           <p className="text-neutral-400">Manage offers</p>
           <a
-            href={`/admin/courses/${courseId}/settings`}
+            href={`/courses/${courseId}/settings`}
             className="text-sm text-green-400 hover:text-green-300"
           >
             Hours & timezone settings →

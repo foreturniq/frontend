@@ -2,7 +2,7 @@
 
 import { useAuth } from "@clerk/nextjs";
 import { useCallback } from "react";
-import { ROLE_MANAGER } from "@/lib/roles";
+import { isInternal, ROLE_MANAGER } from "@/lib/roles";
 
 // fetch against the API with the operator's Clerk session token attached.
 // getToken refreshes near-expiry tokens, so call this per request.
@@ -26,4 +26,9 @@ export function useApiFetch() {
 export function useIsManager() {
   const { orgRole } = useAuth();
   return orgRole === ROLE_MANAGER;
+}
+
+export function useIsInternal() {
+  const { orgId, orgRole } = useAuth();
+  return isInternal(orgId, orgRole);
 }

@@ -187,15 +187,13 @@ export default function CourseSettingsPage() {
     <main className="min-h-screen bg-neutral-950 text-white px-6 py-10">
       <div className="mx-auto max-w-2xl">
         <a
-          href={`/admin/courses/${courseId}/offers`}
+          href={`/courses/${courseId}/menu`}
           className="text-sm text-neutral-500 hover:text-neutral-300"
         >
-          ← Back to offers
+          ← Back to menu
         </a>
 
-        <p className="mt-4 text-sm font-medium text-green-400">
-          Foreturn IQ — Admin
-        </p>
+        <p className="mt-4 text-sm font-medium text-green-400">Foreturn IQ</p>
         <h1 className="mt-1 text-3xl font-bold">
           {courseName || "Loading..."}
         </h1>
