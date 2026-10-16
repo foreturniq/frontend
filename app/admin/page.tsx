@@ -169,7 +169,13 @@ export default function AdminPage() {
           ) : (
             <div className="mt-4 space-y-4">
               {courses.map((course) => (
-                <CourseCard key={course.id} course={course} appUrl={appUrl} highlight={course.id === successId} />
+                <CourseCard
+                  key={course.id}
+                  course={course}
+                  appUrl={appUrl}
+                  highlight={course.id === successId}
+                  onSaved={fetchCourses}
+                />
               ))}
             </div>
           )}
@@ -183,11 +189,60 @@ function CourseCard({
   course,
   appUrl,
   highlight,
+  onSaved,
 }: {
   course: Course;
   appUrl: string;
   highlight: boolean;
+  onSaved: () => void;
 }) {
+  const apiFetch = useApiFetch();
+  const [editing, setEditing] = useState(false);
+  const [stripeId, setStripeId] = useState(course.stripe_account_id);
+  const [orgId, setOrgId] = useState(course.clerk_org_id);
+  const [saving, setSaving] = useState(false);
+  const [editError, setEditError] = useState("");
+
+  function startEdit() {
+    setStripeId(course.stripe_account_id);
+    setOrgId(course.clerk_org_id);
+    setEditError("");
+    setEditing(true);
+  }
+
+  async function handleSave(e: React.SyntheticEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const stripe = stripeId.trim();
+    const org = orgId.trim();
+
+    const warnings = [];
+    if (course.stripe_account_id && !stripe) {
+      warnings.push("Removing the Stripe account stops golfers from paying for orders.");
+    }
+    if (course.clerk_org_id && !org) {
+      warnings.push("Removing the Clerk org locks the course's staff out of their dashboard.");
+    }
+    if (warnings.length && !window.confirm(warnings.join("\n\n") + "\n\nContinue?")) return;
+
+    setSaving(true);
+    setEditError("");
+    // Empty string clears the field on the API.
+    const res = await apiFetch(`/admin/courses/${course.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ stripe_account_id: stripe, clerk_org_id: org }),
+    });
+    setSaving(false);
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => null);
+      setEditError(data?.error ?? `Could not save (${res.status}).`);
+      return;
+    }
+    setEditing(false);
+    onSaved();
+  }
+
   const links = [
     { label: "QR Code", url: `${appUrl}/courses/${course.id}/qr` },
     { label: "Order URL", url: `${appUrl}/courses/${course.id}/order` },
@@ -213,13 +268,67 @@ function CourseCard({
           <p className="font-mono text-xs text-neutral-500">
             {course.clerk_org_id || "no org assigned"}
           </p>
+          <p className="font-mono text-xs text-neutral-500">
+            {course.stripe_account_id || "no Stripe account"}
+          </p>
         </div>
-        {course.stripe_account_id && (
-          <span className="shrink-0 rounded-full bg-green-900/40 px-2.5 py-1 text-xs text-green-400">
-            Stripe connected
-          </span>
-        )}
+        <div className="flex shrink-0 items-center gap-2">
+          {course.stripe_account_id && (
+            <span className="rounded-full bg-green-900/40 px-2.5 py-1 text-xs text-green-400">
+              Stripe connected
+            </span>
+          )}
+          {!editing && (
+            <button
+              type="button"
+              onClick={startEdit}
+              className="rounded-lg border border-neutral-700 px-3 py-1 text-xs text-neutral-300 hover:border-neutral-500"
+            >
+              Edit
+            </button>
+          )}
+        </div>
       </div>
+
+      {editing && (
+        <form onSubmit={handleSave} className="mt-4 space-y-3 rounded-xl border border-neutral-800 p-4">
+          <div>
+            <label className="block text-xs text-neutral-400">Clerk organization ID</label>
+            <input
+              value={orgId}
+              onChange={(e) => setOrgId(e.target.value)}
+              placeholder="org_... (empty to remove)"
+              className="mt-1 block w-full rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-2 font-mono text-sm"
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-neutral-400">Stripe account ID</label>
+            <input
+              value={stripeId}
+              onChange={(e) => setStripeId(e.target.value)}
+              placeholder="acct_... (empty to remove)"
+              className="mt-1 block w-full rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-2 font-mono text-sm"
+            />
+          </div>
+          {editError && <p className="text-sm text-red-300">{editError}</p>}
+          <div className="flex gap-2">
+            <button
+              type="submit"
+              disabled={saving}
+              className="rounded-lg bg-green-500 px-4 py-2 text-sm font-semibold text-black disabled:opacity-50"
+            >
+              {saving ? "Saving..." : "Save"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setEditing(false)}
+              className="rounded-lg border border-neutral-700 px-4 py-2 text-sm text-neutral-300"
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      )}
 
       <div className="mt-4 flex flex-wrap gap-3">
         {adminLinks.map((link) => (
